@@ -20,6 +20,7 @@ final readonly class CustomerRequest
         public ?int $parentId,
         public ?string $phone,
         public bool $isActive,
+        public ?int $userId = null,
     ) {
     }
 
@@ -27,6 +28,7 @@ final readonly class CustomerRequest
     {
         $type   = (string) $request->getPost('customer_type');
         $parent = $request->getPost('parent_id');
+        $user   = $request->getPost('user_id');
 
         return new self(
             customerType: $type,
@@ -38,16 +40,18 @@ final readonly class CustomerRequest
                 ? (int) $parent : null,
             phone: self::nullable($request->getPost('phone')),
             isActive: (string) $request->getPost('is_active') !== '0',
+            userId: ($user !== null && $user !== '') ? (int) $user : null,
         );
     }
 
     /**
-     * @return array{customer_type:string, company_name:string, name:string, email:string, parent_id:?int, phone:?string, is_active:int}
+     * @return array{customer_type:string, user_id:?int, company_name:string, name:string, email:string, parent_id:?int, phone:?string, is_active:int}
      */
     public function toRow(): array
     {
         return [
             'customer_type' => $this->customerType,
+            'user_id'       => $this->userId,
             'company_name'  => $this->companyName,
             'name'          => $this->name,
             'email'         => $this->email,

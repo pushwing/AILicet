@@ -130,18 +130,21 @@ final class AuthController extends BaseAdminController
     }
 
     /**
-     * 개발용 데모 사용자(운영자). AITessera 없이 UI 를 확인하기 위한 용도.
+     * 개발용 데모 사용자. AITessera 없이 UI 를 확인하기 위한 용도.
+     * 이메일로 역할을 구분한다: agency* → 대행사(id 2), client* → 고객(id 3), 그 외 → 운영자(id 1).
      *
      * @return array{id:int, name:string, role:int, aff:string}
      */
     private function demoUser(string $email): array
     {
-        return [
-            'id'   => 1,
-            'name' => $email,
-            'role' => UserRole::Operator->value,
-            'aff'  => 'ailicet',
-        ];
+        $lower = strtolower($email);
+        [$id, $role] = match (true) {
+            str_starts_with($lower, 'agency') => [2, UserRole::Agency],
+            str_starts_with($lower, 'client') => [3, UserRole::Member],
+            default                           => [1, UserRole::Operator],
+        };
+
+        return ['id' => $id, 'name' => $email, 'role' => $role->value, 'aff' => 'ailicet'];
     }
 
     private function renderLoginError(string $message): string
@@ -157,7 +160,7 @@ final class AuthController extends BaseAdminController
     private function devNotice(): ?string
     {
         if (ENVIRONMENT === 'development' && (string) env('aitessera.baseURL') === '') {
-            return '개발 모드: AITessera 미설정 상태입니다. 아무 이메일/비밀번호로 운영자 데모 로그인이 됩니다.';
+            return '개발 모드: AITessera 미설정. 데모 로그인 — 이메일이 agency* 이면 대행사, client* 이면 고객, 그 외 운영자로 로그인됩니다.';
         }
 
         return null;
