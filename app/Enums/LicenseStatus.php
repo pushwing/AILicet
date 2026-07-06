@@ -31,4 +31,22 @@ enum LicenseStatus: string
     {
         return $this === self::Active;
     }
+
+    /**
+     * 현재 상태에서 대상 상태로 전이 가능한가.
+     *
+     * Active     → Suspended / Terminated / Archived
+     * Suspended  → Active / Terminated / Archived
+     * Terminated → Archived
+     * Archived   → (없음)
+     */
+    public function canTransitionTo(self $target): bool
+    {
+        return match ($this) {
+            self::Active     => in_array($target, [self::Suspended, self::Terminated, self::Archived], true),
+            self::Suspended  => in_array($target, [self::Active, self::Terminated, self::Archived], true),
+            self::Terminated => $target === self::Archived,
+            self::Archived   => false,
+        };
+    }
 }
