@@ -2,6 +2,8 @@
 
 namespace Config;
 
+use App\Filters\AdminAuthFilter;
+use App\Filters\JwtAuthFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
 use CodeIgniter\Filters\CSRF;
@@ -34,6 +36,8 @@ class Filters extends BaseFilters
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
+        'jwt'           => JwtAuthFilter::class,
+        'adminAuth'     => AdminAuthFilter::class,
     ];
 
     /**

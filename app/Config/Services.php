@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Libraries\JwtLibrary;
 use CodeIgniter\Config\BaseService;
 
 /**
@@ -19,14 +20,15 @@ use CodeIgniter\Config\BaseService;
  */
 class Services extends BaseService
 {
-    /*
-     * public static function example($getShared = true)
-     * {
-     *     if ($getShared) {
-     *         return static::getSharedInstance('example');
-     *     }
-     *
-     *     return new \CodeIgniter\Example();
-     * }
+    /**
+     * JWT(HS256) 인코더/디코더. 테스트에서 injectMock 으로 시크릿 주입 가능.
      */
+    public static function jwt(bool $getShared = true): JwtLibrary
+    {
+        if ($getShared) {
+            return static::getSharedInstance('jwt');
+        }
+
+        return new JwtLibrary();
+    }
 }
