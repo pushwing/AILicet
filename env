@@ -82,6 +82,15 @@ JWT_SECRET = 'change-me-to-a-random-32+-char-secret'
 # aitessera.baseURL = 'http://localhost:8400'
 
 #--------------------------------------------------------------------
+# 라이센스 서명 (노드락 — Ed25519)
+#--------------------------------------------------------------------
+# `php spark license:keygen` 으로 생성. 개인키는 절대 커밋 금지(운영은 KMS/Secrets Manager).
+# license.ed25519PublicKey =
+# license.ed25519SecretKey =
+# license.deployTarget = 'dev'          # 저장 경로 접두(dev/stg/prd)
+# license.storageDriver = 'local'       # local | s3
+
+#--------------------------------------------------------------------
 # 기능별 선택
 #--------------------------------------------------------------------
 
