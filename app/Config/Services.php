@@ -7,6 +7,7 @@ use App\Libraries\LicenseSigner;
 use App\Licensing\Storage\LicenseStorageInterface;
 use App\Licensing\Storage\LocalLicenseStorage;
 use App\Licensing\Strategy\LicensePayloadStrategyResolver;
+use App\Services\CustomerService;
 use App\Services\FloatingLicenseService;
 use App\Services\LicenseLifecycleService;
 use App\Services\NodeLockLicenseService;
@@ -116,5 +117,17 @@ class Services extends BaseService
         }
 
         return new LicenseLifecycleService();
+    }
+
+    /**
+     * 회원(대행사/고객) 관리 서비스.
+     */
+    public static function customerService(bool $getShared = true): CustomerService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('customerService');
+        }
+
+        return new CustomerService();
     }
 }
