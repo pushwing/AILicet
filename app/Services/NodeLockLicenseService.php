@@ -123,6 +123,63 @@ final class NodeLockLicenseService
         ];
     }
 
+    /**
+     * 기존 라이센스의 서명 파일을 새 키/호스트로 재생성한다(재발급용).
+     *
+     * 페이로드는 저장된 license 레코드 + config(모듈/제한)로부터 복원한다.
+     * 같은 경로에 덮어써 path 는 유지된다.
+     *
+     * @throws RuntimeException 라이센스·상품 없음
+     */
+    public function regenerateFile(int $licenseId, string $licenseKey, string $licenseSn, ?string $hostId = null): string
+    {
+        $licenses = model(LicenseModel::class);
+        /** @var array<string, mixed>|null $license */
+        $license = $licenses->find($licenseId);
+        if ($license === null) {
+            throw new RuntimeException('라이센스를 찾을 수 없습니다.');
+        }
+
+        /** @var array<string, mixed>|null $product */
+        $product = model(ProductModel::class)->find((int) $license['product_id']);
+        if ($product === null) {
+            throw new RuntimeException('상품을 찾을 수 없습니다.');
+        }
+
+        $config  = json_decode((string) ($license['config'] ?? '{}'), true);
+        $modules = is_array($config) && isset($config['modules']) && is_array($config['modules'])
+            ? array_values(array_map('strval', $config['modules'])) : [];
+        $limits  = is_array($config) && isset($config['limits']) && is_array($config['limits'])
+            ? array_map('intval', $config['limits']) : [];
+
+        $request = new NodeLockIssueRequest(
+            productId: (int) $license['product_id'],
+            hostId: $hostId ?? (string) ($license['host_id'] ?? ''),
+            periodCode: (string) $license['period_code'],
+            issuedBy: (int) ($license['issued_by'] ?? 0),
+            version: $license['version'] !== null ? (string) $license['version'] : null,
+            expireDate: $license['expire_date'] !== null ? (string) $license['expire_date'] : null,
+            supportEndDate: $license['support_end_date'] !== null ? (string) $license['support_end_date'] : null,
+            modules: $modules,
+            isTrial: (bool) ($license['is_trial'] ?? false),
+            limits: $limits,
+        );
+
+        // host_id 를 먼저 반영(저장 실패 시 트랜잭션 롤백으로 되돌아감)
+        $licenses->update($licenseId, ['host_id' => $request->hostId]);
+
+        $context = new LicenseBuildContext($request, $product, $licenseSn, $licenseKey, date('Y-m-d'));
+        $payload = $this->resolver->resolve($product)->build($context);
+        $file    = $this->signer->sign($payload);
+
+        $relative = sprintf('%s/%d/%d/NLicense.lic', $this->deployTarget, (int) ($license['issued_by'] ?? 0), $licenseId);
+        $path     = $this->storage->put($relative, $file);
+
+        $licenses->update($licenseId, ['path' => $path]);
+
+        return $path;
+    }
+
     /** 자재코드: 상품코드 + yymmdd + 2자리 일련. */
     private function makeLicenseSn(string $productCode): string
     {

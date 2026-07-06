@@ -8,6 +8,7 @@ use App\Licensing\Storage\LicenseStorageInterface;
 use App\Licensing\Storage\LocalLicenseStorage;
 use App\Licensing\Strategy\LicensePayloadStrategyResolver;
 use App\Services\FloatingLicenseService;
+use App\Services\LicenseLifecycleService;
 use App\Services\NodeLockLicenseService;
 use App\Services\ProductService;
 use CodeIgniter\Config\BaseService;
@@ -103,5 +104,17 @@ class Services extends BaseService
         }
 
         return new FloatingLicenseService();
+    }
+
+    /**
+     * 라이센스 생명주기(상태/연장/재발급) 서비스.
+     */
+    public static function licenseLifecycleService(bool $getShared = true): LicenseLifecycleService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('licenseLifecycleService');
+        }
+
+        return new LicenseLifecycleService();
     }
 }
