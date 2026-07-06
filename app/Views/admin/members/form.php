@@ -64,6 +64,12 @@ $val    = static fn (string $k, string $d = ''): string => esc((string) ($custom
                     <input class="input" id="phone" name="phone" value="<?= $val('phone') ?>">
                 </div>
                 <div class="field">
+                    <label class="field__label" for="user_id">연동 사용자 ID
+                        <span class="muted" style="font-weight:400;">(AITessera user_id — 대행사/고객 로그인 연결)</span>
+                    </label>
+                    <input class="input" type="number" id="user_id" name="user_id" value="<?= $val('user_id') ?>">
+                </div>
+                <div class="field">
                     <label class="field__label" for="is_active">상태</label>
                     <select class="input" id="is_active" name="is_active">
                         <option value="1" <?= $val('is_active', '1') === '1' ? 'selected' : '' ?>>활성</option>

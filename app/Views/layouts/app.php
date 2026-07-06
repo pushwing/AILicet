@@ -26,9 +26,8 @@ $menus = match ($role) {
         ['key' => 'audit',     'label' => '감사로그', 'icon' => '🛡', 'url' => '/admin/audit-logs'],
     ],
     UserRole::Agency => [
-        ['key' => 'dashboard', 'label' => '대시보드', 'icon' => '▦', 'url' => '/admin'],
-        ['key' => 'customers', 'label' => '고객관리', 'icon' => '👤', 'url' => '/admin/customers'],
-        ['key' => 'licenses',  'label' => '라이센스', 'icon' => '🔑', 'url' => '/admin/licenses'],
+        ['key' => 'customers', 'label' => '고객관리', 'icon' => '👤', 'url' => '/agency/customers'],
+        ['key' => 'licenses',  'label' => '라이센스', 'icon' => '🔑', 'url' => '/agency/licenses'],
     ],
     UserRole::Member => [
         ['key' => 'dashboard', 'label' => '대시보드',  'icon' => '▦', 'url' => '/admin'],

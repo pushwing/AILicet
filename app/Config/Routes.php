@@ -5,6 +5,29 @@ use CodeIgniter\Router\RouteCollection;
 /** @var RouteCollection $routes */
 $routes->get('/', 'Home::index');
 
+// ── 대행사 영역 (소유권 스코프) ──
+$routes->group('agency', ['filter' => 'adminAuth:agency'], static function (RouteCollection $routes): void {
+    // 고객 관리
+    $routes->group('customers', static function (RouteCollection $routes): void {
+        $routes->get('/', 'Agency\CustomerController::index');
+        $routes->get('data', 'Agency\CustomerController::data');
+        $routes->get('new', 'Agency\CustomerController::new');
+        $routes->post('/', 'Agency\CustomerController::create');
+        $routes->get('(:num)/edit', 'Agency\CustomerController::edit/$1');
+        $routes->post('(:num)', 'Agency\CustomerController::update/$1');
+        $routes->post('(:num)/delete', 'Agency\CustomerController::delete/$1');
+    });
+    // 라이센스 발급·조회
+    $routes->group('licenses', static function (RouteCollection $routes): void {
+        $routes->get('/', 'Agency\LicenseController::index');
+        $routes->get('data', 'Agency\LicenseController::data');
+        $routes->get('new', 'Agency\LicenseController::new');
+        $routes->post('/', 'Agency\LicenseController::create');
+        $routes->get('product-modules/(:num)', 'Agency\LicenseController::productModules/$1');
+        $routes->get('(:num)', 'Agency\LicenseController::show/$1');
+    });
+});
+
 // ── 서버렌더링(Admin/대행사/고객) ──
 $routes->group('admin', static function (RouteCollection $routes): void {
     // 인증(비보호)

@@ -7,6 +7,7 @@ use App\Libraries\LicenseSigner;
 use App\Licensing\Storage\LicenseStorageInterface;
 use App\Licensing\Storage\LocalLicenseStorage;
 use App\Licensing\Strategy\LicensePayloadStrategyResolver;
+use App\Services\AgencyService;
 use App\Services\CustomerService;
 use App\Services\FloatingLicenseService;
 use App\Services\LicenseLifecycleService;
@@ -142,5 +143,17 @@ class Services extends BaseService
         }
 
         return new LicenseQueryService();
+    }
+
+    /**
+     * 대행사 소유권 스코프 서비스.
+     */
+    public static function agencyService(bool $getShared = true): AgencyService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('agencyService');
+        }
+
+        return new AgencyService();
     }
 }

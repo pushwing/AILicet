@@ -18,7 +18,7 @@ final class CustomerModel extends Model
     protected $useSoftDeletes = true;
     protected $useTimestamps  = true;
     protected $allowedFields  = [
-        'customer_type', 'parent_id', 'company_name', 'name', 'email', 'phone', 'is_active',
+        'customer_type', 'user_id', 'parent_id', 'company_name', 'name', 'email', 'phone', 'is_active',
     ];
 
     protected $validationRules = [];
@@ -32,6 +32,7 @@ final class CustomerModel extends Model
         $this->validationRules = [
             'id'            => 'permit_empty|is_natural_no_zero',
             'customer_type' => "required|in_list[{$types}]",
+            'user_id'       => 'permit_empty|is_natural_no_zero',
             'parent_id'     => 'permit_empty|is_natural_no_zero',
             'company_name'  => 'required|max_length[100]',
             'name'          => 'required|max_length[50]',
