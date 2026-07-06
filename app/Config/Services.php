@@ -7,6 +7,7 @@ use App\Libraries\LicenseSigner;
 use App\Licensing\Storage\LicenseStorageInterface;
 use App\Licensing\Storage\LocalLicenseStorage;
 use App\Licensing\Strategy\LicensePayloadStrategyResolver;
+use App\Services\FloatingLicenseService;
 use App\Services\NodeLockLicenseService;
 use App\Services\ProductService;
 use CodeIgniter\Config\BaseService;
@@ -90,5 +91,17 @@ class Services extends BaseService
             new LicensePayloadStrategyResolver(),
             (string) (env('license.deployTarget') ?: 'dev'),
         );
+    }
+
+    /**
+     * 플로팅 라이센스 발급 서비스.
+     */
+    public static function floatingLicenseService(bool $getShared = true): FloatingLicenseService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('floatingLicenseService');
+        }
+
+        return new FloatingLicenseService();
     }
 }
