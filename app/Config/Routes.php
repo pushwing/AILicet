@@ -17,6 +17,17 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('/', 'Admin\DashboardController::index');
     });
 
+    // 회원관리 — 운영자 전용
+    $routes->group('members', ['filter' => 'adminAuth:operator'], static function (RouteCollection $routes): void {
+        $routes->get('/', 'Admin\CustomerController::index');
+        $routes->get('data', 'Admin\CustomerController::data');
+        $routes->get('new', 'Admin\CustomerController::new');
+        $routes->post('/', 'Admin\CustomerController::create');
+        $routes->get('(:num)/edit', 'Admin\CustomerController::edit/$1');
+        $routes->post('(:num)', 'Admin\CustomerController::update/$1');
+        $routes->post('(:num)/delete', 'Admin\CustomerController::delete/$1');
+    });
+
     // 상품·모듈 관리 — 운영자 전용
     $routes->group('products', ['filter' => 'adminAuth:operator'], static function (RouteCollection $routes): void {
         $routes->get('/', 'Admin\ProductController::index');
