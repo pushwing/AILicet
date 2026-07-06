@@ -16,4 +16,14 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->group('', ['filter' => 'adminAuth'], static function (RouteCollection $routes): void {
         $routes->get('/', 'Admin\DashboardController::index');
     });
+
+    // 상품·모듈 관리 — 운영자 전용
+    $routes->group('products', ['filter' => 'adminAuth:operator'], static function (RouteCollection $routes): void {
+        $routes->get('/', 'Admin\ProductController::index');
+        $routes->get('new', 'Admin\ProductController::new');
+        $routes->post('/', 'Admin\ProductController::create');
+        $routes->get('(:num)/edit', 'Admin\ProductController::edit/$1');
+        $routes->post('(:num)', 'Admin\ProductController::update/$1');
+        $routes->post('(:num)/delete', 'Admin\ProductController::delete/$1');
+    });
 });

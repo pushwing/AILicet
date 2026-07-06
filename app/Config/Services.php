@@ -3,6 +3,7 @@
 namespace Config;
 
 use App\Libraries\JwtLibrary;
+use App\Services\ProductService;
 use CodeIgniter\Config\BaseService;
 
 /**
@@ -30,5 +31,17 @@ class Services extends BaseService
         }
 
         return new JwtLibrary();
+    }
+
+    /**
+     * 상품·모듈 서비스.
+     */
+    public static function productService(bool $getShared = true): ProductService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('productService');
+        }
+
+        return new ProductService();
     }
 }
