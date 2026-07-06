@@ -28,6 +28,22 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('(:num)/delete', 'Admin\CustomerController::delete/$1');
     });
 
+    // 라이센스 관리 — 운영자 전용
+    $routes->group('licenses', ['filter' => 'adminAuth:operator'], static function (RouteCollection $routes): void {
+        $routes->get('/', 'Admin\LicenseController::index');
+        $routes->get('data', 'Admin\LicenseController::data');
+        $routes->get('new', 'Admin\LicenseController::new');
+        $routes->post('/', 'Admin\LicenseController::create');
+        $routes->get('product-modules/(:num)', 'Admin\LicenseController::productModules/$1');
+        $routes->get('(:num)', 'Admin\LicenseController::show/$1');
+        $routes->get('(:num)/download', 'Admin\LicenseController::download/$1');
+        $routes->post('(:num)/suspend', 'Admin\LicenseController::suspend/$1');
+        $routes->post('(:num)/resume', 'Admin\LicenseController::resume/$1');
+        $routes->post('(:num)/terminate', 'Admin\LicenseController::terminate/$1');
+        $routes->post('(:num)/extend', 'Admin\LicenseController::extend/$1');
+        $routes->post('(:num)/reissue', 'Admin\LicenseController::reissue/$1');
+    });
+
     // 상품·모듈 관리 — 운영자 전용
     $routes->group('products', ['filter' => 'adminAuth:operator'], static function (RouteCollection $routes): void {
         $routes->get('/', 'Admin\ProductController::index');

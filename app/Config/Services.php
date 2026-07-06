@@ -10,6 +10,7 @@ use App\Licensing\Strategy\LicensePayloadStrategyResolver;
 use App\Services\CustomerService;
 use App\Services\FloatingLicenseService;
 use App\Services\LicenseLifecycleService;
+use App\Services\LicenseQueryService;
 use App\Services\NodeLockLicenseService;
 use App\Services\ProductService;
 use CodeIgniter\Config\BaseService;
@@ -129,5 +130,17 @@ class Services extends BaseService
         }
 
         return new CustomerService();
+    }
+
+    /**
+     * 라이센스 조회(목록·상세) 서비스.
+     */
+    public static function licenseQueryService(bool $getShared = true): LicenseQueryService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('licenseQueryService');
+        }
+
+        return new LicenseQueryService();
     }
 }
