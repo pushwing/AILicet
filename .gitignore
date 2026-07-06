@@ -63,6 +63,9 @@ Vagrantfile
 /writable/debugbar/*
 !/writable/debugbar/index.html
 
+/writable/licenses/*
+!/writable/licenses/index.html
+
 php_errors.log
 
 #-------------------------
