@@ -1,0 +1,81 @@
+#--------------------------------------------------------------------
+# Example Environment Configuration file
+#
+# This file can be used as a starting point for your own
+# custom .env files, and contains most of the possible settings
+# available in a default install.
+#
+# By default, all of the settings are commented out. If you want
+# to override the setting, you must un-comment it by removing the '#'
+# at the beginning of the line.
+#--------------------------------------------------------------------
+
+#--------------------------------------------------------------------
+# ENVIRONMENT
+#--------------------------------------------------------------------
+
+# CI_ENVIRONMENT = production
+
+#--------------------------------------------------------------------
+# APP
+#--------------------------------------------------------------------
+
+app.baseURL = 'http://localhost:8300/'
+# If you have trouble with `.`, you could also use `_`.
+# app_baseURL = ''
+# app.forceGlobalSecureRequests = false
+# app.CSPEnabled = false
+
+#--------------------------------------------------------------------
+# DATABASE
+#--------------------------------------------------------------------
+
+database.default.hostname = localhost
+database.default.database = aicura
+database.default.username = root
+database.default.password =
+database.default.DBDriver = MySQLi
+database.default.DBPrefix =
+database.default.port = 3306
+
+# 테스트 DB (MySQLi 사용 시 Config\Database::$tests 값도 갱신할 것)
+database.tests.hostname = localhost
+database.tests.database = aicura_test
+database.tests.username = root
+database.tests.password =
+database.tests.DBDriver = MySQLi
+database.tests.DBPrefix =
+database.tests.charset = utf8mb4
+database.tests.DBCollat = utf8mb4_general_ci
+database.tests.port = 3306
+
+#--------------------------------------------------------------------
+# ENCRYPTION
+#--------------------------------------------------------------------
+
+# encryption.key =
+
+#--------------------------------------------------------------------
+# SESSION
+#--------------------------------------------------------------------
+
+# session.driver = 'CodeIgniter\Session\Handlers\FileHandler'
+# session.savePath = null
+
+#--------------------------------------------------------------------
+# LOGGER
+#--------------------------------------------------------------------
+
+# logger.threshold = 4
+
+#--------------------------------------------------------------------
+# JWT (필수 — 32자 이상 랜덤 문자열)
+#--------------------------------------------------------------------
+
+JWT_SECRET = 'change-me-to-a-random-32+-char-secret'
+
+#--------------------------------------------------------------------
+# 기능별 선택
+#--------------------------------------------------------------------
+
+# TINYMCE_API_KEY =    # 리치 에디터 사용 시

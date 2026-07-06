@@ -1,0 +1,20 @@
+parameters:
+    level: 6
+    phpVersion: 80400
+    paths:
+        - app
+    excludePaths:
+        analyse:
+            - app/Views/*
+    bootstrapFiles:
+        - vendor/codeigniter4/framework/system/Test/bootstrap.php
+    scanDirectories:
+        - vendor/codeigniter4/framework/system
+    # ENVIRONMENT 는 실행 환경(testing/development/production)에 따라 값이 바뀌는
+    # 동적 상수다. PHPStan 이 고정 리터럴로 오판해 비교식을 always-true/false 로
+    # 잡지 않도록 명시한다. (억제가 아닌 정확한 타입 정보 제공)
+    dynamicConstantNames:
+        - ENVIRONMENT
+        - CI_DEBUG
+    universalObjectCratesClasses:
+        - CodeIgniter\Entity\Entity
