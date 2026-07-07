@@ -56,6 +56,16 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('/', 'Admin\DashboardController::index');
     });
 
+    // 회원 계정(AITessera) — 운영자 전용
+    $routes->group('accounts', ['filter' => 'adminAuth:operator'], static function (RouteCollection $routes): void {
+        $routes->get('/', 'Admin\AccountController::index');
+        $routes->get('data', 'Admin\AccountController::data');
+        $routes->get('new', 'Admin\AccountController::new');
+        $routes->post('/', 'Admin\AccountController::create');
+        $routes->get('(:num)/edit', 'Admin\AccountController::edit/$1');
+        $routes->post('(:num)', 'Admin\AccountController::update/$1');
+    });
+
     // 회원관리 — 운영자 전용
     $routes->group('members', ['filter' => 'adminAuth:operator'], static function (RouteCollection $routes): void {
         $routes->get('/', 'Admin\CustomerController::index');

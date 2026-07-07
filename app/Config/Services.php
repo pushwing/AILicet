@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Integrations\AitesseraClient;
 use App\Libraries\JwtLibrary;
 use App\Libraries\LicenseSigner;
 use App\Notifications\LogNotifier;
@@ -154,6 +155,18 @@ class Services extends BaseService
         }
 
         return new LicenseQueryService();
+    }
+
+    /**
+     * AITessera 운영자 회원관리 API 클라이언트.
+     */
+    public static function aitesseraClient(bool $getShared = true): AitesseraClient
+    {
+        if ($getShared) {
+            return static::getSharedInstance('aitesseraClient');
+        }
+
+        return new AitesseraClient((string) env('aitessera.baseURL'));
     }
 
     /**
