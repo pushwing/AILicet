@@ -4,6 +4,11 @@ namespace Config;
 
 use App\Libraries\JwtLibrary;
 use App\Libraries\LicenseSigner;
+use App\Notifications\LogNotifier;
+use App\Notifications\Notifier;
+use App\Notifications\SlackNotifier;
+use App\Services\AbuseDetectionService;
+use App\Services\LicenseExpiryService;
 use App\Licensing\Storage\LicenseStorageInterface;
 use App\Licensing\Storage\LocalLicenseStorage;
 use App\Licensing\Strategy\LicensePayloadStrategyResolver;
@@ -145,6 +150,47 @@ class Services extends BaseService
         }
 
         return new LicenseQueryService();
+    }
+
+    /**
+     * 알림기 — 슬랙 webhook 설정 시 SlackNotifier, 없으면 LogNotifier.
+     */
+    public static function notifier(bool $getShared = true): Notifier
+    {
+        if ($getShared) {
+            return static::getSharedInstance('notifier');
+        }
+
+        $webhook = (string) env('slack.webhookUrl');
+        if ($webhook === '') {
+            return new LogNotifier();
+        }
+
+        return new SlackNotifier($webhook, WRITEPATH . 'logs/notify-failed');
+    }
+
+    /**
+     * 라이센스 만료 배치 서비스.
+     */
+    public static function licenseExpiryService(bool $getShared = true): LicenseExpiryService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('licenseExpiryService');
+        }
+
+        return new LicenseExpiryService();
+    }
+
+    /**
+     * 부정사용 감지 서비스.
+     */
+    public static function abuseDetectionService(bool $getShared = true): AbuseDetectionService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('abuseDetectionService');
+        }
+
+        return new AbuseDetectionService();
     }
 
     /**
