@@ -85,6 +85,44 @@ class AitesseraClient
     }
 
     /**
+     * Refresh 토큰으로 새 액세스·리프레시 토큰을 발급받는다(공개 엔드포인트, 인증 헤더 불필요).
+     *
+     * @return array{access_token:string, refresh_token:?string}
+     *
+     * @throws AitesseraException 비2xx 응답·통신 실패
+     */
+    public function refresh(string $refreshToken): array
+    {
+        if (! $this->isConfigured()) {
+            throw new AitesseraException('AITessera 가 설정되지 않았습니다.', 'AITESSERA_NOT_CONFIGURED', 503);
+        }
+
+        $response = service('curlrequest')->request('POST', rtrim($this->baseUrl, '/') . '/api/v1/tokens/refresh', [
+            'json'        => ['refresh_token' => $refreshToken],
+            'timeout'     => 5,
+            'http_errors' => false,
+        ]);
+
+        $status = $response->getStatusCode();
+        $body   = json_decode((string) $response->getBody(), true);
+        $body   = is_array($body) ? $body : [];
+        if ($status < 200 || $status >= 300) {
+            throw new AitesseraException(
+                (string) ($body['message'] ?? '토큰 갱신에 실패했습니다.'),
+                (string) ($body['code'] ?? 'TOKEN_REFRESH_FAILED'),
+                $status,
+            );
+        }
+
+        $data = is_array($body['data'] ?? null) ? $body['data'] : $body;
+
+        return [
+            'access_token'  => (string) ($data['access_token'] ?? ''),
+            'refresh_token' => isset($data['refresh_token']) ? (string) $data['refresh_token'] : null,
+        ];
+    }
+
+    /**
      * @param array<string, mixed> $options
      *
      * @return array<string, mixed>

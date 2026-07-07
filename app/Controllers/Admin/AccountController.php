@@ -49,17 +49,103 @@ final class AccountController extends BaseAdminController
         ], static fn ($v) => $v !== null && $v !== '');
 
         try {
-            $result = service('aitesseraClient')->listUsers($token, $query);
+            $result = $this->withAitessera($token, static fn (string $t): array => service('aitesseraClient')->listUsers($t, $query));
         } catch (AitesseraException $e) {
+            if ($this->isTokenExpired($e)) {
+                return $this->reloginJson();
+            }
+
             return $this->jsonError($e->errorCode(), $e->getMessage(), $e->httpStatusCode());
         }
 
-        return $this->response->setJSON(['status' => 'success', 'data' => $result['items'], 'meta' => $result['meta']]);
+        return $this->response->setJSON(['status' => 'success', 'data' => $result['items'] ?? [], 'meta' => $result['meta'] ?? []]);
+    }
+
+    /**
+     * AITessera 호출을 실행하되, 액세스 토큰이 만료되면 refresh 토큰으로 1회 자동 갱신 후 재시도한다.
+     * 갱신 실패 시 원래 예외를 그대로 던진다(상위에서 재로그인 처리).
+     *
+     * @param callable(string):array<string, mixed> $op
+     *
+     * @return array<string, mixed>
+     *
+     * @throws AitesseraException
+     */
+    private function withAitessera(string $token, callable $op): array
+    {
+        try {
+            return $op($token);
+        } catch (AitesseraException $e) {
+            if (! $this->isTokenExpired($e)) {
+                throw $e;
+            }
+            $new = $this->tryRefresh();
+            if ($new === null) {
+                throw $e;
+            }
+
+            return $op($new); // 갱신된 토큰으로 1회 재시도
+        }
+    }
+
+    /** refresh 토큰으로 액세스 토큰을 갱신하고 세션을 갱신한다. 성공 시 새 토큰, 실패 시 null. */
+    private function tryRefresh(): ?string
+    {
+        $user    = session()->get('authUser');
+        $refresh = is_array($user) ? ($user['refresh'] ?? null) : null;
+        if (! is_string($refresh) || $refresh === '') {
+            return null;
+        }
+
+        try {
+            $pair = service('aitesseraClient')->refresh($refresh);
+        } catch (AitesseraException) {
+            return null;
+        }
+        if ($pair['access_token'] === '') {
+            return null;
+        }
+
+        $user['token'] = $pair['access_token'];
+        if ($pair['refresh_token'] !== null && $pair['refresh_token'] !== '') {
+            $user['refresh'] = $pair['refresh_token'];
+        }
+        session()->set('authUser', $user);
+
+        return $pair['access_token'];
     }
 
     private function jsonError(string $code, string $message, int $status): ResponseInterface
     {
         return $this->response->setStatusCode($status)->setJSON(['status' => 'error', 'code' => $code, 'message' => $message]);
+    }
+
+    /** AITessera 응답이 토큰 만료·무효(재로그인 필요)인가. */
+    private function isTokenExpired(AitesseraException $e): bool
+    {
+        return $e->httpStatusCode() === 401
+            || in_array($e->errorCode(), ['TOKEN_EXPIRED', 'INVALID_TOKEN', 'UNAUTHORIZED'], true);
+    }
+
+    /** 토큰 만료 — 세션을 비우고 로그인으로 이동(HTML). */
+    private function forceRelogin(): RedirectResponse
+    {
+        session()->remove('authUser');
+
+        return redirect()->to('/admin/login')->with('error', '세션(토큰)이 만료되었습니다. 다시 로그인해 주세요.');
+    }
+
+    /** 토큰 만료 — 세션을 비우고 재로그인 위치를 알리는 JSON(AJAX). */
+    private function reloginJson(): ResponseInterface
+    {
+        session()->remove('authUser');
+
+        return $this->response->setStatusCode(401)->setJSON([
+            'status'   => 'error',
+            'code'     => 'SESSION_EXPIRED',
+            'message'  => '세션(토큰)이 만료되었습니다. 다시 로그인해 주세요.',
+            'redirect' => '/admin/login',
+        ]);
     }
 
     /** GET /admin/accounts/new — 계정 생성 폼. */
@@ -97,6 +183,10 @@ final class AccountController extends BaseAdminController
                 'affiliation' => $aff,
             ]);
         } catch (AitesseraException $e) {
+            if ($this->isTokenExpired($e)) {
+                return $this->forceRelogin();
+            }
+
             return redirect()->back()->withInput()->with('error', $e->getMessage());
         }
 
@@ -114,6 +204,10 @@ final class AccountController extends BaseAdminController
         try {
             $account = service('aitesseraClient')->getUser($token, $id);
         } catch (AitesseraException $e) {
+            if ($this->isTokenExpired($e)) {
+                return $this->forceRelogin();
+            }
+
             return redirect()->to('/admin/accounts')->with('error', $e->getMessage());
         }
 
@@ -149,6 +243,10 @@ final class AccountController extends BaseAdminController
         try {
             service('aitesseraClient')->updateUser($token, $id, $data);
         } catch (AitesseraException $e) {
+            if ($this->isTokenExpired($e)) {
+                return $this->forceRelogin();
+            }
+
             return redirect()->back()->withInput()->with('error', $e->getMessage());
         }
 
