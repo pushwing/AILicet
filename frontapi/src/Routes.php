@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Controller\ActivationController;
+use App\Controller\AnalysisEndController;
+use App\Controller\AnalysisStartController;
 use App\Controller\BypassController;
 use App\Controller\DocsController;
 use App\Controller\EffectivenessController;
+use App\Controller\FloatingEffectivenessController;
 use App\Controller\HealthController;
 use App\Controller\LicenseInfoController;
 use App\Controller\OpenApiController;
@@ -31,5 +35,11 @@ function routes(): array
         ['POST', '/api/v1/licenses/info', LicenseInfoController::class],
         ['POST', '/api/v1/licenses/effectiveness', EffectivenessController::class],
         ['POST', '/api/v1/licenses/bypass', BypassController::class],
+
+        // 플로팅 인증
+        ['POST', '/api/v1/floating/activation', ActivationController::class],
+        ['POST', '/api/v1/floating/effectiveness', FloatingEffectivenessController::class],
+        ['POST', '/api/v1/floating/analysis/start', AnalysisStartController::class],
+        ['POST', '/api/v1/floating/analysis/end', AnalysisEndController::class],
     ];
 }
