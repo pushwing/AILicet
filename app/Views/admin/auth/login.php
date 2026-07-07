@@ -28,5 +28,25 @@
         </div>
         <button type="submit" class="btn btn--primary btn--block">로그인</button>
     </form>
+
+    <?php if (! empty($demoLogin)): ?>
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--color-border);">
+            <p class="muted" style="font-size:12px;margin:0 0 10px;">개발용 빠른 로그인</p>
+            <div style="display:flex;gap:8px;">
+                <?php foreach ([
+                    ['role' => '운영자', 'email' => 'operator@demo.test'],
+                    ['role' => '대행사', 'email' => 'agency@demo.test'],
+                    ['role' => '일반회원', 'email' => 'client@demo.test'],
+                ] as $demo): ?>
+                    <form method="post" action="/admin/login" style="flex:1;">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="email" value="<?= esc($demo['email']) ?>">
+                        <input type="hidden" name="password" value="demo1234">
+                        <button type="submit" class="btn btn--ghost btn--block" style="padding:8px;"><?= esc($demo['role']) ?></button>
+                    </form>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 <?= $this->endSection() ?>
