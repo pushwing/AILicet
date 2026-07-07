@@ -103,4 +103,11 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('(:num)', 'Admin\ProductController::update/$1');
         $routes->post('(:num)/delete', 'Admin\ProductController::delete/$1');
     });
+
+    // 감사로그 — 운영자 전용 (읽기 전용)
+    $routes->group('audit-logs', ['filter' => 'adminAuth:operator'], static function (RouteCollection $routes): void {
+        $routes->get('/', 'Admin\AuditLogController::index');
+        $routes->get('data', 'Admin\AuditLogController::data');
+        $routes->get('(:num)', 'Admin\AuditLogController::show/$1');
+    });
 });

@@ -23,6 +23,7 @@ use App\Services\ClientSignupService;
 use App\Services\CustomerService;
 use App\Services\FloatingLicenseService;
 use App\Services\LicenseLifecycleService;
+use App\Services\AuditLogQueryService;
 use App\Services\LicenseQueryService;
 use App\Services\NodeLockLicenseService;
 use App\Services\ProductService;
@@ -155,6 +156,18 @@ class Services extends BaseService
         }
 
         return new LicenseQueryService();
+    }
+
+    /**
+     * 감사 로그 조회(목록·상세) 서비스.
+     */
+    public static function auditLogQueryService(bool $getShared = true): AuditLogQueryService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('auditLogQueryService');
+        }
+
+        return new AuditLogQueryService();
     }
 
     /**
