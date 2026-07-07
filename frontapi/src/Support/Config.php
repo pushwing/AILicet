@@ -22,6 +22,8 @@ final readonly class Config
         public int $rateLimitMax,
         public int $rateLimitWindow,
         public string $appEnv,
+        public string $licensePublicKey,
+        public string $rawLogPath,
     ) {
     }
 
@@ -45,6 +47,8 @@ final readonly class Config
             rateLimitMax: (int) $get('RATE_LIMIT_MAX', '60'),
             rateLimitWindow: (int) $get('RATE_LIMIT_WINDOW', '60'),
             appEnv: $get('APP_ENV', 'production'),
+            licensePublicKey: $get('LICENSE_ED25519_PUBLIC_KEY'),
+            rawLogPath: $get('RAW_LOG_PATH', __DIR__ . '/../../var/logs/raw'),
         );
     }
 }

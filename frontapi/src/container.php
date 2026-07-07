@@ -6,7 +6,9 @@ use App\Middleware\RoutingMiddleware;
 use App\Support\Config;
 use App\Support\InMemoryRateLimiter;
 use App\Support\Jwt;
+use App\Support\LicenseVerifier;
 use App\Support\RateLimiter;
+use App\Support\RawLogWriter;
 use App\Support\RedisRateLimiter;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Predis\Client as Redis;
@@ -25,6 +27,10 @@ return [
     Psr17Factory::class => autowire(),
 
     Jwt::class => factory(static fn (Config $c): Jwt => new Jwt($c->jwtSecret)),
+
+    LicenseVerifier::class => factory(static fn (Config $c): LicenseVerifier => new LicenseVerifier($c->licensePublicKey)),
+
+    RawLogWriter::class => factory(static fn (Config $c): RawLogWriter => new RawLogWriter($c->rawLogPath)),
 
     Redis::class => factory(static fn (Config $c): Redis => new Redis([
         'scheme' => 'tcp',
