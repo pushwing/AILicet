@@ -93,7 +93,8 @@ final class AuthController extends BaseAdminController
             'http_errors' => false,
         ]);
 
-        if ($response->getStatusCode() !== 200) {
+        // AITessera 토큰 발급은 201(Created)을 반환한다. 2xx 를 성공으로 처리.
+        if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
             return null;
         }
 
