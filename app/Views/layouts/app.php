@@ -30,9 +30,9 @@ $menus = match ($role) {
         ['key' => 'licenses',  'label' => '라이센스', 'icon' => '🔑', 'url' => '/agency/licenses'],
     ],
     UserRole::Member => [
-        ['key' => 'dashboard', 'label' => '대시보드',  'icon' => '▦', 'url' => '/admin'],
-        ['key' => 'licenses',  'label' => '내 라이센스', 'icon' => '🔑', 'url' => '/admin/licenses'],
-        ['key' => 'support',   'label' => '고객센터',  'icon' => '💬', 'url' => '/admin/support'],
+        ['key' => 'licenses',  'label' => '내 라이센스', 'icon' => '🔑', 'url' => '/client/licenses'],
+        ['key' => 'support',   'label' => '고객센터',   'icon' => '💬', 'url' => '/client/support'],
+        ['key' => 'profile',   'label' => '내 정보',    'icon' => '👤', 'url' => '/client/profile'],
     ],
     default => [
         ['key' => 'dashboard', 'label' => '대시보드', 'icon' => '▦', 'url' => '/admin'],

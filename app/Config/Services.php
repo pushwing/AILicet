@@ -8,6 +8,8 @@ use App\Licensing\Storage\LicenseStorageInterface;
 use App\Licensing\Storage\LocalLicenseStorage;
 use App\Licensing\Strategy\LicensePayloadStrategyResolver;
 use App\Services\AgencyService;
+use App\Services\ClientService;
+use App\Services\ClientSignupService;
 use App\Services\CustomerService;
 use App\Services\FloatingLicenseService;
 use App\Services\LicenseLifecycleService;
@@ -155,5 +157,29 @@ class Services extends BaseService
         }
 
         return new AgencyService();
+    }
+
+    /**
+     * 고객 자가가입 서비스.
+     */
+    public static function clientSignupService(bool $getShared = true): ClientSignupService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('clientSignupService');
+        }
+
+        return new ClientSignupService();
+    }
+
+    /**
+     * 고객 셀프서비스 서비스.
+     */
+    public static function clientService(bool $getShared = true): ClientService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('clientService');
+        }
+
+        return new ClientService();
     }
 }
