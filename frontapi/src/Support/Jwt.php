@@ -19,6 +19,26 @@ final class Jwt
     }
 
     /**
+     * 클레임을 HS256 토큰으로 인코딩한다(활성화 캐시 토큰 발급용).
+     *
+     * @param array<string, mixed> $claims
+     */
+    public function encode(array $claims, ?int $ttl = null): string
+    {
+        $now = time();
+        $claims['iat'] ??= $now;
+        if ($ttl !== null) {
+            $claims['exp'] = $now + $ttl;
+        }
+
+        $h = $this->b64e((string) json_encode(['typ' => 'JWT', 'alg' => 'HS256'], JSON_UNESCAPED_SLASHES));
+        $p = $this->b64e((string) json_encode($claims, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        $s = $this->b64e(hash_hmac('sha256', $h . '.' . $p, $this->secret, true));
+
+        return "{$h}.{$p}.{$s}";
+    }
+
+    /**
      * @return array<string, mixed>
      *
      * @throws InvalidTokenException|TokenExpiredException
