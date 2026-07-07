@@ -49,7 +49,7 @@ final class AccountController extends BaseAdminController
         ], static fn ($v) => $v !== null && $v !== '');
 
         try {
-            $result = service('aitesseraClient')->listUsers($token, $query);
+            $result = $this->withAitessera($token, static fn (string $t): array => service('aitesseraClient')->listUsers($t, $query));
         } catch (AitesseraException $e) {
             if ($this->isTokenExpired($e)) {
                 return $this->reloginJson();
@@ -58,7 +58,61 @@ final class AccountController extends BaseAdminController
             return $this->jsonError($e->errorCode(), $e->getMessage(), $e->httpStatusCode());
         }
 
-        return $this->response->setJSON(['status' => 'success', 'data' => $result['items'], 'meta' => $result['meta']]);
+        return $this->response->setJSON(['status' => 'success', 'data' => $result['items'] ?? [], 'meta' => $result['meta'] ?? []]);
+    }
+
+    /**
+     * AITessera 호출을 실행하되, 액세스 토큰이 만료되면 refresh 토큰으로 1회 자동 갱신 후 재시도한다.
+     * 갱신 실패 시 원래 예외를 그대로 던진다(상위에서 재로그인 처리).
+     *
+     * @param callable(string):array<string, mixed> $op
+     *
+     * @return array<string, mixed>
+     *
+     * @throws AitesseraException
+     */
+    private function withAitessera(string $token, callable $op): array
+    {
+        try {
+            return $op($token);
+        } catch (AitesseraException $e) {
+            if (! $this->isTokenExpired($e)) {
+                throw $e;
+            }
+            $new = $this->tryRefresh();
+            if ($new === null) {
+                throw $e;
+            }
+
+            return $op($new); // 갱신된 토큰으로 1회 재시도
+        }
+    }
+
+    /** refresh 토큰으로 액세스 토큰을 갱신하고 세션을 갱신한다. 성공 시 새 토큰, 실패 시 null. */
+    private function tryRefresh(): ?string
+    {
+        $user    = session()->get('authUser');
+        $refresh = is_array($user) ? ($user['refresh'] ?? null) : null;
+        if (! is_string($refresh) || $refresh === '') {
+            return null;
+        }
+
+        try {
+            $pair = service('aitesseraClient')->refresh($refresh);
+        } catch (AitesseraException) {
+            return null;
+        }
+        if ($pair['access_token'] === '') {
+            return null;
+        }
+
+        $user['token'] = $pair['access_token'];
+        if ($pair['refresh_token'] !== null && $pair['refresh_token'] !== '') {
+            $user['refresh'] = $pair['refresh_token'];
+        }
+        session()->set('authUser', $user);
+
+        return $pair['access_token'];
     }
 
     private function jsonError(string $code, string $message, int $status): ResponseInterface

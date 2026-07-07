@@ -83,7 +83,7 @@ final class AuthController extends BaseAdminController
     /**
      * AITessera 로그인 API 로 토큰을 발급받아 사용자 정보를 해석한다.
      *
-     * @return array{id:int, name:string, role:int, aff:?string, token:string}|null
+     * @return array{id:int, name:string, role:int, aff:?string, token:string, refresh:?string}|null
      */
     private function authenticateWithAitessera(string $base, string $email, string $password): ?array
     {
@@ -105,13 +105,15 @@ final class AuthController extends BaseAdminController
         }
 
         $claims = service('jwt')->decode($token); // 서명·만료 검증(공유 시크릿)
+        $data   = is_array($body['data'] ?? null) ? $body['data'] : $body;
 
         return [
-            'id'    => (int) ($claims['sub'] ?? 0),
-            'name'  => $email,
-            'role'  => (int) ($claims['role'] ?? UserRole::Member->value),
-            'aff'   => isset($claims['aff']) ? (string) $claims['aff'] : null,
-            'token' => $token, // AITessera 운영자 API 호출용 액세스 토큰
+            'id'      => (int) ($claims['sub'] ?? 0),
+            'name'    => $email,
+            'role'    => (int) ($claims['role'] ?? UserRole::Member->value),
+            'aff'     => isset($claims['aff']) ? (string) $claims['aff'] : null,
+            'token'   => $token, // AITessera 운영자 API 호출용 액세스 토큰
+            'refresh' => isset($data['refresh_token']) ? (string) $data['refresh_token'] : null, // 자동 갱신용
         ];
     }
 
