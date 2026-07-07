@@ -79,3 +79,59 @@ jobs:
 
       - name: PHPUnit
         run: composer test
+
+  frontapi:
+    name: frontapi (pure PHP · PHPStan · PHPUnit)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ailicet
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    defaults:
+      run:
+        working-directory: frontapi
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, intl, pdo_mysql, curl, dom, xml, tokenizer
+
+      - name: 의존성 설치
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: PHPStan (level 6)
+        run: composer analyse
+
+      - name: MySQL 헬스 대기
+        run: |
+          for i in $(seq 1 30); do
+            if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then
+              echo "MySQL ready"; break
+            fi
+            echo "waiting for mysql..."; sleep 2
+          done
+
+      - name: PHPUnit
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: '3306'
+          DB_NAME: ailicet
+          DB_USER: root
+          DB_PASS: root
+        run: composer test
