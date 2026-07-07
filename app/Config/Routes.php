@@ -5,6 +5,22 @@ use CodeIgniter\Router\RouteCollection;
 /** @var RouteCollection $routes */
 $routes->get('/', 'Home::index');
 
+// ── 고객 자가가입 (공개) ──
+$routes->get('signup', 'Client\SignupController::showSignup');
+$routes->post('signup', 'Client\SignupController::signup');
+$routes->get('verify', 'Client\SignupController::verify');
+
+// ── 고객 영역 (소유권 스코프) ──
+$routes->group('client', ['filter' => 'adminAuth:member'], static function (RouteCollection $routes): void {
+    $routes->get('licenses', 'Client\LicenseController::index');
+    $routes->get('licenses/data', 'Client\LicenseController::data');
+    $routes->get('licenses/(:num)', 'Client\LicenseController::show/$1');
+    $routes->get('profile', 'Client\ProfileController::show');
+    $routes->post('profile', 'Client\ProfileController::update');
+    $routes->get('support', 'Client\SupportController::index');
+    $routes->post('support', 'Client\SupportController::create');
+});
+
 // ── 대행사 영역 (소유권 스코프) ──
 $routes->group('agency', ['filter' => 'adminAuth:agency'], static function (RouteCollection $routes): void {
     // 고객 관리

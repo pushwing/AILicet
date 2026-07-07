@@ -19,6 +19,7 @@ final class CustomerModel extends Model
     protected $useTimestamps  = true;
     protected $allowedFields  = [
         'customer_type', 'user_id', 'parent_id', 'company_name', 'name', 'email', 'phone', 'is_active',
+        'verify_token', 'email_verified_at',
     ];
 
     protected $validationRules = [];
