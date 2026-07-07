@@ -97,7 +97,9 @@ class AitesseraClient
             throw new AitesseraException('AITessera 가 설정되지 않았습니다.', 'AITESSERA_NOT_CONFIGURED', 503);
         }
 
-        $response = service('curlrequest')->request($method, rtrim($this->baseUrl, '/') . $path, array_merge([
+        // HTTP 메서드는 반드시 대문자로 전송한다. 소문자면 엄격한 서버(PHP 내장 서버 등)가
+        // "Malformed HTTP request" 로 거부해 빈 응답(curl 52)이 된다.
+        $response = service('curlrequest')->request(strtoupper($method), rtrim($this->baseUrl, '/') . $path, array_merge([
             'headers'     => ['Authorization' => 'Bearer ' . $token, 'Accept' => 'application/json'],
             'timeout'     => 5,
             'http_errors' => false,
