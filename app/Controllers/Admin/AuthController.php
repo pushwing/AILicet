@@ -27,8 +27,9 @@ final class AuthController extends BaseAdminController
         }
 
         return $this->render('admin/auth/login', [
-            'title'  => '로그인',
-            'notice' => $this->devNotice(),
+            'title'     => '로그인',
+            'notice'    => $this->devNotice(),
+            'demoLogin' => $this->isDemoLogin(),
         ]);
     }
 
@@ -151,17 +152,24 @@ final class AuthController extends BaseAdminController
     private function renderLoginError(string $message): string
     {
         return $this->render('admin/auth/login', [
-            'title'  => '로그인',
-            'error'  => $message,
-            'email'  => (string) $this->request->getPost('email'),
-            'notice' => $this->devNotice(),
+            'title'     => '로그인',
+            'error'     => $message,
+            'email'     => (string) $this->request->getPost('email'),
+            'notice'    => $this->devNotice(),
+            'demoLogin' => $this->isDemoLogin(),
         ]);
+    }
+
+    /** 개발용 데모 로그인 활성화 여부(development + AITessera 미설정). */
+    private function isDemoLogin(): bool
+    {
+        return ENVIRONMENT === 'development' && (string) env('aitessera.baseURL') === '';
     }
 
     private function devNotice(): ?string
     {
-        if (ENVIRONMENT === 'development' && (string) env('aitessera.baseURL') === '') {
-            return '개발 모드: AITessera 미설정. 데모 로그인 — 이메일이 agency* 이면 대행사, client* 이면 고객, 그 외 운영자로 로그인됩니다.';
+        if ($this->isDemoLogin()) {
+            return '개발 모드: AITessera 미설정. 아래 빠른 로그인으로 운영자/대행사/일반회원 역할에 바로 접속할 수 있습니다.';
         }
 
         return null;
