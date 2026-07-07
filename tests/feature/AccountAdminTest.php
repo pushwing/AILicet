@@ -132,4 +132,41 @@ final class AccountAdminTest extends CIUnitTestCase
         $this->assertSame(5, $this->client->updated[0][0]);
         $this->assertSame('수정됨', $this->client->updated[0][1]['name']);
     }
+
+    /** 토큰 만료 예외를 던지는 클라이언트 더블을 주입한다. */
+    private function injectExpiredClient(): void
+    {
+        $expired = new class ('http://aitessera') extends AitesseraClient {
+            public function listUsers(string $token, array $query): array
+            {
+                throw new \App\Exceptions\AitesseraException('토큰이 만료되었습니다.', 'TOKEN_EXPIRED', 401);
+            }
+
+            public function getUser(string $token, int $id): array
+            {
+                throw new \App\Exceptions\AitesseraException('토큰이 만료되었습니다.', 'TOKEN_EXPIRED', 401);
+            }
+        };
+        Services::injectMock('aitesseraClient', $expired);
+    }
+
+    public function testExpiredTokenOnDataReturnsSessionExpired(): void
+    {
+        $this->injectExpiredClient();
+
+        $result = $this->withSession($this->operator())->get('admin/accounts/data?page=1');
+        $result->assertStatus(401);
+
+        $json = json_decode($result->getJSON() ?? '', true);
+        $this->assertSame('SESSION_EXPIRED', $json['code']);
+        $this->assertSame('/admin/login', $json['redirect']);
+    }
+
+    public function testExpiredTokenOnEditRedirectsToLogin(): void
+    {
+        $this->injectExpiredClient();
+
+        $result = $this->withSession($this->operator())->get('admin/accounts/5/edit');
+        $result->assertRedirectTo('/admin/login');
+    }
 }

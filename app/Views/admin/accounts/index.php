@@ -71,6 +71,12 @@
         const a = document.getElementById('activeFilter').value; if (a) params.set('is_active', a);
         const res = await fetch(`/admin/accounts/data?${params}`);
         const json = await res.json();
+        // 토큰 만료 → 로그인으로 이동해 재획득
+        if (json.code === 'SESSION_EXPIRED' && json.redirect) {
+            alert(json.message || '세션이 만료되었습니다. 다시 로그인해 주세요.');
+            window.location.href = json.redirect;
+            return;
+        }
         if (json.status !== 'success') { document.getElementById('pageInfo').textContent = json.message || '조회 실패'; return; }
         api.setGridOption('rowData', json.data);
         state.lastPage = json.meta.last_page || 1;
