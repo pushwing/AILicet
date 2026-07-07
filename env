@@ -1,0 +1,111 @@
+#--------------------------------------------------------------------
+# Example Environment Configuration file
+#
+# This file can be used as a starting point for your own
+# custom .env files, and contains most of the possible settings
+# available in a default install.
+#
+# By default, all of the settings are commented out. If you want
+# to override the setting, you must un-comment it by removing the '#'
+# at the beginning of the line.
+#--------------------------------------------------------------------
+
+#--------------------------------------------------------------------
+# ENVIRONMENT
+#--------------------------------------------------------------------
+
+# CI_ENVIRONMENT = production
+
+#--------------------------------------------------------------------
+# APP
+#--------------------------------------------------------------------
+
+app.baseURL = 'http://localhost:8300/'
+# If you have trouble with `.`, you could also use `_`.
+# app_baseURL = ''
+# app.forceGlobalSecureRequests = false
+# app.CSPEnabled = false
+
+#--------------------------------------------------------------------
+# DATABASE
+#--------------------------------------------------------------------
+
+database.default.hostname = localhost
+database.default.database = aicura
+database.default.username = root
+database.default.password =
+database.default.DBDriver = MySQLi
+database.default.DBPrefix =
+database.default.port = 3306
+
+# 테스트 DB (MySQLi 사용 시 Config\Database::$tests 값도 갱신할 것)
+database.tests.hostname = localhost
+database.tests.database = aicura_test
+database.tests.username = root
+database.tests.password =
+database.tests.DBDriver = MySQLi
+database.tests.DBPrefix =
+database.tests.charset = utf8mb4
+database.tests.DBCollat = utf8mb4_general_ci
+database.tests.port = 3306
+
+#--------------------------------------------------------------------
+# ENCRYPTION
+#--------------------------------------------------------------------
+
+# encryption.key =
+
+#--------------------------------------------------------------------
+# SESSION
+#--------------------------------------------------------------------
+
+# session.driver = 'CodeIgniter\Session\Handlers\FileHandler'
+# session.savePath = null
+
+#--------------------------------------------------------------------
+# LOGGER
+#--------------------------------------------------------------------
+
+# logger.threshold = 4
+
+#--------------------------------------------------------------------
+# JWT (필수 — 32자 이상 랜덤 문자열, AITessera 서명키와 동일 값 공유)
+#--------------------------------------------------------------------
+
+JWT_SECRET = 'change-me-to-a-random-32+-char-secret'
+
+#--------------------------------------------------------------------
+# AITessera (회원 인증 서비스)
+#--------------------------------------------------------------------
+# 설정 시 로그인은 AITessera 로그인 API로 위임된다.
+# 미설정 + development 환경이면 UI 확인용 데모 로그인이 활성화된다.
+# aitessera.baseURL = 'http://localhost:8400'
+
+#--------------------------------------------------------------------
+# 라이센스 서명 (노드락 — Ed25519)
+#--------------------------------------------------------------------
+# `php spark license:keygen` 으로 생성. 개인키는 절대 커밋 금지(운영은 KMS/Secrets Manager).
+# license.ed25519PublicKey =
+# license.ed25519SecretKey =
+# license.deployTarget = 'dev'          # 저장 경로 접두(dev/stg/prd)
+# license.storageDriver = 'local'       # local | s3
+
+#--------------------------------------------------------------------
+# 알림 · 배치 (CRON)
+#--------------------------------------------------------------------
+# 슬랙 Incoming Webhook (미설정 시 로그로 대체)
+# slack.webhookUrl =
+# 부정사용 감지가 읽을 frontApi 사용 로그 경로(미설정 시 writable/logs/raw)
+# abuse.rawLogPath =
+
+#--------------------------------------------------------------------
+# 기능별 선택
+#--------------------------------------------------------------------
+
+# TINYMCE_API_KEY =    # 리치 에디터 사용 시
+
+#--------------------------------------------------------------------
+# Redis (로그 큐 · Rate Limit)
+#--------------------------------------------------------------------
+# redis.host = 127.0.0.1
+# redis.port = 6379

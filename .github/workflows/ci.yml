@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: backend (PHP 8.5 · PHPStan · PHPUnit)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: aicura_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, intl, mysqli, curl, dom, xml, tokenizer
+          coverage: pcov
+
+      - name: Composer 캐시
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-
+
+      - name: 의존성 설치
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: .env 구성 (CI용 DB · JWT)
+        run: |
+          cp env .env
+          sed -i "s|^database.default.hostname = .*|database.default.hostname = 127.0.0.1|" .env
+          sed -i "s|^database.default.database = .*|database.default.database = aicura_test|" .env
+          sed -i "s|^database.default.password =.*|database.default.password = root|" .env
+          sed -i "s|^database.tests.hostname = .*|database.tests.hostname = 127.0.0.1|" .env
+          sed -i "s|^database.tests.password =.*|database.tests.password = root|" .env
+          sed -i "s|^JWT_SECRET = .*|JWT_SECRET = ci-test-secret-key-01234567890123456789|" .env
+
+      - name: writable 디렉토리 보장
+        run: |
+          mkdir -p writable/cache writable/logs writable/session writable/uploads writable/debugbar
+          chmod -R 777 writable
+
+      - name: PHPStan (level 6)
+        run: composer analyse
+
+      - name: MySQL 헬스 대기
+        run: |
+          for i in $(seq 1 30); do
+            if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then
+              echo "MySQL ready"; break
+            fi
+            echo "waiting for mysql..."; sleep 2
+          done
+
+      - name: PHPUnit
+        run: composer test
+
+  frontapi:
+    name: frontapi (pure PHP · PHPStan · PHPUnit)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ailicet
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    defaults:
+      run:
+        working-directory: frontapi
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, intl, pdo_mysql, curl, dom, xml, tokenizer
+
+      - name: 의존성 설치
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: PHPStan (level 6)
+        run: composer analyse
+
+      - name: MySQL 헬스 대기
+        run: |
+          for i in $(seq 1 30); do
+            if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then
+              echo "MySQL ready"; break
+            fi
+            echo "waiting for mysql..."; sleep 2
+          done
+
+      - name: PHPUnit
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: '3306'
+          DB_NAME: ailicet
+          DB_USER: root
+          DB_PASS: root
+        run: composer test
