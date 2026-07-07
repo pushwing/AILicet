@@ -19,5 +19,8 @@ final class Tasks extends BaseTasks
     {
         // 매일 09:00 라이센스 일일 배치(만료 알림·종료·부정사용 감지)
         $schedule->command('license:daily')->daily('09:00')->named('license-daily');
+
+        // 매분 로그 큐 소비(원시파일 + DB)
+        $schedule->command('logs:consume')->everyMinute()->named('logs-consume');
     }
 }

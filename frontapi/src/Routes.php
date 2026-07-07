@@ -13,6 +13,7 @@ use App\Controller\EffectivenessController;
 use App\Controller\FloatingEffectivenessController;
 use App\Controller\HealthController;
 use App\Controller\LicenseInfoController;
+use App\Controller\LogController;
 use App\Controller\OpenApiController;
 use App\Controller\PingController;
 
@@ -41,5 +42,8 @@ function routes(): array
         ['POST', '/api/v1/floating/effectiveness', FloatingEffectivenessController::class],
         ['POST', '/api/v1/floating/analysis/start', AnalysisStartController::class],
         ['POST', '/api/v1/floating/analysis/end', AnalysisEndController::class],
+
+        // 로그 수집
+        ['POST', '/api/v1/logs', LogController::class],
     ];
 }
