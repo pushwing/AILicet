@@ -126,6 +126,23 @@ php spark db:seed DemoSeeder     # 대행사(user_id=2)·고객(user_id=3) + 샘
 > 로그인 화면의 빠른 로그인 버튼으로도 각 역할에 즉시 접속할 수 있다.
 > 운영 환경은 AITessera 인증으로 로그인하며, 데모 로그인은 개발 환경 전용이다.
 
+### AITessera 실제 로그인 (회원 계정 관리)
+
+운영자 화면의 **회원 계정 관리**(`/admin/accounts`, AITessera 회원 API 연동)는 실제 AITessera
+로그인으로 발급된 토큰이 필요하다. 데모 로그인은 토큰이 없어 이 화면은 안내만 표시된다.
+
+1. [AITessera](https://github.com/pushwing/AITessera) 를 실행한다(예: `php -S localhost:9300 -t public`, 운영자 계정 시드).
+2. AILicet `.env` 에 아래를 설정한다 — `JWT_SECRET` 은 **AITessera 서명키와 동일**해야 토큰 검증이 된다.
+   ```env
+   aitessera.baseURL = http://127.0.0.1:9300
+   JWT_SECRET        = <AITessera 와 동일한 시크릿>
+   ```
+   > `aitessera.baseURL` 이 설정되면 데모 빠른 로그인은 비활성화되고 실제 AITessera 인증을 사용한다.
+3. AITessera 운영자 계정으로 로그인하면 토큰이 세션에 저장되고 회원 계정 관리가 동작한다.
+
+> ⚠️ 개발에서 AITessera 연동(서버-투-서버 호출)을 확인할 때는 **`make serve`(FrankenPHP)** 를 권장한다.
+> `make serve-spark`(PHP 내장 서버)는 단일 스레드라 서버-투-서버 HTTP 호출이 불안정하다.
+
 ## 검증
 
 ```bash
