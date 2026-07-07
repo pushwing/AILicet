@@ -7,8 +7,12 @@ use App\Libraries\LicenseSigner;
 use App\Notifications\LogNotifier;
 use App\Notifications\Notifier;
 use App\Notifications\SlackNotifier;
+use App\Queue\LogQueue;
+use App\Queue\RedisLogQueue;
 use App\Services\AbuseDetectionService;
 use App\Services\LicenseExpiryService;
+use App\Services\LogQueueConsumer;
+use Predis\Client as Redis;
 use App\Licensing\Storage\LicenseStorageInterface;
 use App\Licensing\Storage\LocalLicenseStorage;
 use App\Licensing\Strategy\LicensePayloadStrategyResolver;
@@ -191,6 +195,46 @@ class Services extends BaseService
         }
 
         return new AbuseDetectionService();
+    }
+
+    /**
+     * Redis 클라이언트(predis).
+     */
+    public static function redis(bool $getShared = true): Redis
+    {
+        if ($getShared) {
+            return static::getSharedInstance('redis');
+        }
+
+        return new Redis([
+            'scheme' => 'tcp',
+            'host'   => (string) (env('redis.host') ?: '127.0.0.1'),
+            'port'   => (int) (env('redis.port') ?: 6379),
+        ]);
+    }
+
+    /**
+     * 로그 큐(소비자 측, Redis).
+     */
+    public static function logQueue(bool $getShared = true): LogQueue
+    {
+        if ($getShared) {
+            return static::getSharedInstance('logQueue');
+        }
+
+        return new RedisLogQueue(static::redis());
+    }
+
+    /**
+     * 로그 큐 소비자.
+     */
+    public static function logQueueConsumer(bool $getShared = true): LogQueueConsumer
+    {
+        if ($getShared) {
+            return static::getSharedInstance('logQueueConsumer');
+        }
+
+        return new LogQueueConsumer(static::logQueue());
     }
 
     /**

@@ -6,9 +6,12 @@ use App\Middleware\RoutingMiddleware;
 use App\Support\Config;
 use App\Support\InMemoryRateLimiter;
 use App\Support\Jwt;
+use App\Support\InMemoryLogQueue;
 use App\Support\LicenseVerifier;
+use App\Support\LogQueue;
 use App\Support\RateLimiter;
 use App\Support\RawLogWriter;
+use App\Support\RedisLogQueue;
 use App\Support\RedisRateLimiter;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Predis\Client as Redis;
@@ -31,6 +34,15 @@ return [
     LicenseVerifier::class => factory(static fn (Config $c): LicenseVerifier => new LicenseVerifier($c->licensePublicKey)),
 
     RawLogWriter::class => factory(static fn (Config $c): RawLogWriter => new RawLogWriter($c->rawLogPath)),
+
+    // 로그 큐 — 테스트는 인메모리, 그 외 Redis
+    LogQueue::class => factory(static function (ContainerInterface $ct, Config $c): LogQueue {
+        if ($c->appEnv === 'testing') {
+            return new InMemoryLogQueue();
+        }
+
+        return new RedisLogQueue($ct->get(Redis::class));
+    }),
 
     Redis::class => factory(static fn (Config $c): Redis => new Redis([
         'scheme' => 'tcp',
