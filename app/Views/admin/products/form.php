@@ -2,6 +2,7 @@
 /**
  * @var array<string, mixed>|null $product
  * @var list<array{id:int, product_id:int, code:string, name:string}> $modules
+ * @var list<array{id:int, product_id:int, version:string}> $versions
  * @var list<array{id:int, code:string, name:string}> $masterModules
  * @var list<\App\Enums\LicenseType> $licenseTypes
  * @var list<\App\Enums\PeriodCode> $periodCodes
@@ -9,6 +10,12 @@
 $isEdit = $product !== null;
 $action = $isEdit ? '/admin/products/' . $product['id'] : '/admin/products';
 $val    = static fn (string $k, string $default = ''): string => esc((string) ($product[$k] ?? old($k) ?? $default));
+
+// 버전 textarea 초기값: 활성 버전 목록(줄 단위). old() 우선(검증 실패 재입력 보존).
+$versionsText = old('versions');
+if ($versionsText === null) {
+    $versionsText = implode("\n", array_map(static fn (array $v): string => $v['version'], $versions));
+}
 ?>
 <?= $this->extend('layouts/app') ?>
 
@@ -45,11 +52,6 @@ $val    = static fn (string $k, string $default = ''): string => esc((string) ($
                            value="<?= $val('product_family') ?>" placeholder="예: teslab">
                 </div>
                 <div class="field">
-                    <label class="field__label" for="version">버전</label>
-                    <input class="input" id="version" name="version"
-                           value="<?= $val('version') ?>" placeholder="예: 3.0.1">
-                </div>
-                <div class="field">
                     <label class="field__label" for="license_type">라이선스 종류 *</label>
                     <select class="input" id="license_type" name="license_type" required>
                         <?php foreach ($licenseTypes as $lt): ?>
@@ -77,6 +79,21 @@ $val    = static fn (string $k, string $default = ''): string => esc((string) ($
                         <option value="0" <?= $val('is_active', '1') === '0' ? 'selected' : '' ?>>비활성</option>
                     </select>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+        <div class="card__head">버전</div>
+        <div class="card__body">
+            <p class="muted" style="margin-top:0;margin-bottom:12px;font-size:12px;">
+                이 상품의 버전을 한 줄에 하나씩 입력합니다. 라이센스 발급 시 여기서 선택합니다.
+                <?php if ($isEdit): ?>목록에서 제거한 버전은 비활성 처리되어 발급 목록에서 숨겨집니다(이력 보존).<?php endif; ?>
+            </p>
+            <div class="field" style="margin-bottom:0;">
+                <label class="field__label" for="versions">버전 목록</label>
+                <textarea class="input" id="versions" name="versions" rows="4"
+                          placeholder="예:&#10;2.0.1&#10;1.0.1"><?= esc($versionsText) ?></textarea>
             </div>
         </div>
     </div>

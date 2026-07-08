@@ -10,6 +10,7 @@ use App\Models\LicenseHistoryModel;
 use App\Models\LicenseModel;
 use App\Models\ProductModel;
 use App\Models\ProductModuleModel;
+use App\Models\ProductVersionModel;
 use CodeIgniter\Database\Seeder;
 
 /**
@@ -30,12 +31,15 @@ final class DemoSeeder extends Seeder
         $customers = model(CustomerModel::class);
         $licenses = model(LicenseModel::class);
 
-        // 상품 + 모듈
+        // 상품 + 모듈 + 버전(이슈 #48: 상품별 다중 버전)
         $productId = (int) $products->insert([
-            'product_code' => 'DEMO01', 'name' => '데모 제품', 'product_family' => 'demo',
-            'license_type' => 'floating', 'version' => '1.0', 'period_code' => 'perpetual_credit', 'is_active' => 1,
+            'product_code' => 'DEMO01', 'name' => '데모상품', 'product_family' => 'demo',
+            'license_type' => 'floating', 'version' => '2.0.1', 'period_code' => 'perpetual_credit', 'is_active' => 1,
         ], true);
         model(ProductModuleModel::class)->insert(['product_id' => $productId, 'code' => 'MD001', 'name' => '데모 모듈']);
+        $versions = model(ProductVersionModel::class);
+        $versions->insert(['product_id' => $productId, 'version' => '2.0.1', 'is_active' => 1]);
+        $versions->insert(['product_id' => $productId, 'version' => '1.0.1', 'is_active' => 1]);
 
         // 대행사(로그인 user_id=2)
         $agencyId = (int) $customers->insert([
@@ -58,7 +62,7 @@ final class DemoSeeder extends Seeder
         // 일반회원에게 발급된 플로팅 라이센스
         $licenseId = (int) $licenses->insert([
             'product_id' => $productId, 'license_type' => 'floating', 'period_code' => 'perpetual_credit',
-            'status' => 'active', 'version' => '1.0', 'activate_term' => 24, 'check_term' => 30,
+            'status' => 'active', 'version' => '2.0.1', 'activate_term' => 24, 'check_term' => 30,
             'config' => json_encode(['modules' => ['MD001'], 'limits' => ['credit' => 500]], JSON_UNESCAPED_UNICODE),
             'issued_by' => 1, 'issue_date' => date('Y-m-d'),
         ], true);
@@ -80,6 +84,7 @@ final class DemoSeeder extends Seeder
         $db->query("DELETE l FROM licenses l JOIN products p ON p.id = l.product_id WHERE p.product_code = 'DEMO01'");
         $db->query("DELETE FROM customers WHERE email LIKE 'demo-%@ailicet.test'");
         $db->query("DELETE pm FROM product_modules pm JOIN products p ON p.id = pm.product_id WHERE p.product_code = 'DEMO01'");
+        $db->query("DELETE pv FROM product_versions pv JOIN products p ON p.id = pv.product_id WHERE p.product_code = 'DEMO01'");
         $db->query("DELETE FROM products WHERE product_code = 'DEMO01'");
     }
 }

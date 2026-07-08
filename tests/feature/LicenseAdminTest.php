@@ -115,12 +115,13 @@ final class LicenseAdminTest extends CIUnitTestCase
         $pid = $this->seedProduct('nodelock');
 
         $result = $this->withSession($this->operator())->post('admin/licenses', [
-            'license_type' => 'nodelock',
-            'product_id'   => $pid,
-            'period_code'  => 'period',
-            'host_id'      => 'HOST-UI-001',
-            'expire_date'  => '2027-12-31',
-            'modules'      => ['MD001'],
+            'license_type'     => 'nodelock',
+            'product_id'       => $pid,
+            'period_code'      => 'period',
+            'host_id'          => 'HOST-UI-001',
+            'expire_date'      => '2027-12-31',
+            'support_end_date' => '2028-06-30',
+            'modules'          => ['MD001'],
         ]);
 
         $result->assertRedirect();
@@ -155,7 +156,7 @@ final class LicenseAdminTest extends CIUnitTestCase
         // 발급
         $this->withSession($this->operator())->post('admin/licenses', [
             'license_type' => 'nodelock', 'product_id' => $pid, 'period_code' => 'period',
-            'host_id' => 'HOST-A', 'modules' => ['MD001'],
+            'host_id' => 'HOST-A', 'expire_date' => '2027-12-31', 'support_end_date' => '2028-06-30', 'modules' => ['MD001'],
         ]);
         /** @var array<string,mixed> $license */
         $license = model(LicenseModel::class)->orderBy('id', 'DESC')->first();
@@ -180,7 +181,7 @@ final class LicenseAdminTest extends CIUnitTestCase
         $pid = $this->seedProduct('nodelock');
         $this->withSession($this->operator())->post('admin/licenses', [
             'license_type' => 'nodelock', 'product_id' => $pid, 'period_code' => 'period',
-            'host_id' => 'HOST-DL', 'modules' => ['MD001'],
+            'host_id' => 'HOST-DL', 'expire_date' => '2027-12-31', 'support_end_date' => '2028-06-30', 'modules' => ['MD001'],
         ]);
         /** @var array<string,mixed> $license */
         $license = model(LicenseModel::class)->orderBy('id', 'DESC')->first();
@@ -206,7 +207,7 @@ final class LicenseAdminTest extends CIUnitTestCase
         $pid = $this->seedProduct('nodelock');
         $this->withSession($this->operator())->post('admin/licenses', [
             'license_type' => 'nodelock', 'product_id' => $pid, 'period_code' => 'period',
-            'host_id' => 'HOST-R', 'modules' => ['MD001'],
+            'host_id' => 'HOST-R', 'expire_date' => '2027-12-31', 'support_end_date' => '2028-06-30', 'modules' => ['MD001'],
         ]);
         /** @var array<string,mixed> $license */
         $license = model(LicenseModel::class)->orderBy('id', 'DESC')->first();

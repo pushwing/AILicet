@@ -13,6 +13,7 @@ use App\Enums\PeriodCode;
 use App\Exceptions\InvalidStateTransitionException;
 use App\Models\CustomerModel;
 use App\Models\ProductModuleModel;
+use App\Models\ProductVersionModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use RuntimeException;
@@ -70,6 +71,15 @@ final class LicenseController extends BaseAdminController
         ]);
     }
 
+    /** GET /admin/licenses/product-versions/{id} — 상품 버전(JSON, 발급 폼 연동). */
+    public function productVersions(int $productId): ResponseInterface
+    {
+        return $this->response->setJSON([
+            'status' => 'success',
+            'data'   => model(ProductVersionModel::class)->byProduct($productId),
+        ]);
+    }
+
     /** POST /admin/licenses — 발급(종류별 분기). */
     public function create(): RedirectResponse
     {
@@ -80,7 +90,7 @@ final class LicenseController extends BaseAdminController
             'product_id'       => (int) $this->request->getPost('product_id'),
             'period_code'      => (string) $this->request->getPost('period_code'),
             'issued_by'        => $issuedBy,
-            'version'          => $this->request->getPost('version'),
+            'version'          => $this->request->getPost('version') ?: null,
             'expire_date'      => $this->request->getPost('expire_date') ?: null,
             'support_end_date' => $this->request->getPost('support_end_date') ?: null,
             'modules'          => (array) $this->request->getPost('modules'),
@@ -95,6 +105,17 @@ final class LicenseController extends BaseAdminController
         ];
 
         try {
+            // 기간정책별 필수/잠금 필드 검증·정규화(잠금 필드 값 제거). 이슈 #48
+            $normalized = service('licensePolicyValidator')->normalize(
+                $payload['period_code'],
+                $payload['expire_date'],
+                $payload['support_end_date'],
+                $payload['limits'],
+            );
+            $payload['expire_date']      = $normalized['expire_date'];
+            $payload['support_end_date'] = $normalized['support_end_date'];
+            $payload['limits']           = $normalized['limits'];
+
             if ($type === LicenseType::Floating->value) {
                 $result = service('floatingLicenseService')->issue(FloatingIssueRequest::fromArray(array_merge($payload, [
                     'activate_term' => (int) ($this->request->getPost('activate_term') ?: 24),

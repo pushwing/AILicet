@@ -50,4 +50,45 @@ enum PeriodCode: string
             default                                                        => false,
         };
     }
+
+    /**
+     * 만료일·기술지원 종료일 입력이 필수인 정책인가.
+     *
+     * 이슈 #48: 두 날짜는 한 묶음으로 기간 제한 계열(Period/PeriodCount)에서만 요구한다.
+     */
+    public function requiresExpireDate(): bool
+    {
+        return $this->hasExpireDate();
+    }
+
+    /** 사용 횟수(limit_count) 입력이 필수인 정책인가. */
+    public function requiresCount(): bool
+    {
+        return match ($this) {
+            self::PeriodCount, self::PerpetualCount => true,
+            default                                 => false,
+        };
+    }
+
+    /** 크레딧(limit_credit) 입력이 필수인 정책인가. */
+    public function requiresCredit(): bool
+    {
+        return $this === self::PerpetualCredit;
+    }
+
+    /**
+     * 발급 폼 동적 제어·서버 검증에 쓰는 필드 요구 매트릭스.
+     *
+     * true 인 필드는 활성+필수, false 인 필드는 잠금(값 무시).
+     *
+     * @return array{expire:bool, count:bool, credit:bool}
+     */
+    public function fieldRules(): array
+    {
+        return [
+            'expire' => $this->requiresExpireDate(),
+            'count'  => $this->requiresCount(),
+            'credit' => $this->requiresCredit(),
+        ];
+    }
 }
