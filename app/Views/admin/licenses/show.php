@@ -1,10 +1,13 @@
 <?php
 /**
- * @var array<string, mixed>        $license
- * @var array<string, mixed>|null   $product
- * @var list<array<string, mixed>>  $customers
- * @var list<array<string, mixed>>  $history
- * @var string|null                 $current_key
+ * @var array<string, mixed>                                                $license
+ * @var array<string, mixed>|null                                           $product
+ * @var list<array{id:int, product_id:int, code:string, name:string}>       $productModules
+ * @var list<string>                                                        $licenseModules
+ * @var array<string, int>                                                  $limits
+ * @var list<array<string, mixed>>                                          $customers
+ * @var list<array<string, mixed>>                                          $history
+ * @var string|null                                                         $current_key
  */
 use App\Enums\HistoryType;
 use App\Enums\LicenseStatus;
@@ -15,9 +18,13 @@ $status   = LicenseStatus::tryFrom((string) $license['status']);
 $type     = LicenseType::tryFrom((string) $license['license_type']);
 $period   = PeriodCode::tryFrom((string) $license['period_code']);
 $isNode   = $type === LicenseType::NodeLock;
+$isTrial  = (bool) ($license['is_trial'] ?? false);
 $statusCls = ['active' => 'success', 'suspended' => 'warning', 'terminated' => 'danger', 'archived' => 'muted'][(string) $license['status']] ?? 'muted';
 $row      = static fn (string $label, ?string $value): string =>
     '<div style="display:flex;padding:8px 0;border-bottom:1px solid var(--color-border);"><div style="width:140px;color:var(--color-text-muted);">' . esc($label) . '</div><div>' . esc($value ?? '-') . '</div></div>';
+
+// 발급된 모듈 코드 조회용 집합(대조 표시).
+$issuedModules = array_fill_keys($licenseModules, true);
 ?>
 <?= $this->extend('layouts/app') ?>
 
@@ -26,6 +33,9 @@ $row      = static fn (string $label, ?string $value): string =>
     <div>
         <h1 class="page-head__title">라이센스 #<?= esc((string) $license['id']) ?>
             <span class="badge badge--<?= $statusCls ?>" style="vertical-align:middle;"><?= esc($status?->label() ?? '') ?></span>
+            <?php if ($isTrial): ?>
+                <span class="badge badge--warning" style="vertical-align:middle;">체험판</span>
+            <?php endif; ?>
         </h1>
         <p class="page-head__desc"><?= esc($type?->label() ?? '') ?> · <?= esc((string) ($product['name'] ?? '')) ?></p>
     </div>
@@ -54,6 +64,12 @@ $row      = static fn (string $label, ?string $value): string =>
             <?= $row('만료일', $license['expire_date'] !== null ? (string) $license['expire_date'] : '무기한') ?>
             <?= $row('기술지원 종료', $license['support_end_date'] !== null ? (string) $license['support_end_date'] : null) ?>
             <?= $row('발급일', $license['issue_date'] !== null ? (string) $license['issue_date'] : null) ?>
+            <?= $row('사용 횟수 제한', isset($limits['count']) ? number_format($limits['count']) . '회' : '무제한') ?>
+            <?= $row('크레딧 제한', isset($limits['credit']) ? number_format($limits['credit']) : '무제한') ?>
+            <?php if (! $isNode): ?>
+                <?= $row('활성화 간격', $license['activate_term'] !== null ? (string) $license['activate_term'] . '시간' : null) ?>
+                <?= $row('유효성 체크 간격', $license['check_term'] !== null ? (string) $license['check_term'] . '분' : null) ?>
+            <?php endif; ?>
             <?= $row('현재 관리키', $current_key) ?>
             <?= $row('발급 회원', implode(', ', array_map(static fn ($c) => (string) $c['company_name'], $customers)) ?: null) ?>
             <?php if ($isNode && ! empty($license['path'])): ?>
@@ -103,6 +119,57 @@ $row      = static fn (string $label, ?string $value): string =>
                 </form>
             <?php else: ?>
                 <p class="muted mb-0">종료·보관된 라이센스는 상태 변경할 수 없습니다.</p>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:20px;align-items:start;margin-top:20px;">
+    <!-- 상품 정보 -->
+    <div class="card">
+        <div class="card__head" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>상품 정보</span>
+            <?php if ($product !== null): ?>
+                <a href="/admin/products/<?= esc((string) $product['id']) ?>/edit" class="btn btn--ghost" style="font-size:13px;padding:4px 10px;">상품 관리</a>
+            <?php endif; ?>
+        </div>
+        <div class="card__body">
+            <?php if ($product === null): ?>
+                <p class="muted mb-0">연결된 상품 정보를 찾을 수 없습니다.</p>
+            <?php else: ?>
+                <?php $prodType = LicenseType::tryFrom((string) ($product['license_type'] ?? '')); ?>
+                <?php $prodPeriod = PeriodCode::tryFrom((string) ($product['period_code'] ?? '')); ?>
+                <?= $row('상품명', (string) ($product['name'] ?? '')) ?>
+                <?= $row('상품코드', (string) ($product['product_code'] ?? '')) ?>
+                <?= $row('제품군', ! empty($product['product_family']) ? (string) $product['product_family'] : null) ?>
+                <?= $row('기본 종류', $prodType?->label()) ?>
+                <?= $row('기본 기간정책', $prodPeriod?->label()) ?>
+                <?= $row('상품 상태', ! empty($product['is_active']) ? '활성' : '비활성') ?>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- 모듈 -->
+    <div class="card">
+        <div class="card__head">모듈</div>
+        <div class="card__body">
+            <?php if (empty($productModules)): ?>
+                <p class="muted mb-0">상품에 등록된 모듈이 없습니다.</p>
+            <?php else: ?>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                    <?php foreach ($productModules as $m): ?>
+                        <?php $issued = isset($issuedModules[$m['code']]); ?>
+                        <span class="badge badge--<?= $issued ? 'success' : 'muted' ?>"
+                              title="<?= esc((string) $m['code']) ?>"
+                              style="<?= $issued ? '' : 'opacity:0.6;' ?>">
+                            <?= esc((string) $m['name']) ?>
+                        </span>
+                    <?php endforeach; ?>
+                </div>
+                <p class="muted" style="font-size:12px;margin:12px 0 0;">
+                    <span class="badge badge--success">발급</span> 이 라이센스에 부여된 모듈 ·
+                    <span class="badge badge--muted">미발급</span> 상품 보유 모듈
+                </p>
             <?php endif; ?>
         </div>
     </div>
