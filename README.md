@@ -23,12 +23,12 @@ AILicet 은 성형·토탈 광고 솔루션(AIvance 제품군)을 위한 **라�
                │        공유 MySQL / Redis          │
                └──────────────┬────────────────────┘
                               │  회원 인증 위임
-                   ┌──────────▼──────────┐
-                   │  AITessera (JWT HS256)│
-                   └──────────────────────┘
+                   ┌───────────────────────────┐
+                   │  AITessera (JWT RS256/HS256)│
+                   └───────────────────────────┘
 ```
 
-- **회원 인증**은 [AITessera](https://github.com/pushwing/AITessera)(JWT) 에 위임 — AILicet 은 공유 시크릿으로 토큰을 검증만 한다.
+- **회원 인증**은 [AITessera](https://github.com/pushwing/AITessera)(JWT) 에 위임 — AILicet 은 토큰을 **검증만** 한다. 검증은 비대칭키(RS256) 공개키 방식이며, 무중단 전환을 위해 대칭키(HS256)도 과도기 동안 병행 허용한다([이슈 #55](https://github.com/pushwing/AILicet/issues/55)).
 - **노드락**(오프라인): Ed25519 서명 파일 배포 → 클라이언트가 공개키로 오프라인 검증.
 - **플로팅**(온라인): 관리키만 배포 → frontApi 로 온라인 활성화·유효성·사용량 차감.
 
@@ -39,7 +39,7 @@ AILicet 은 성형·토탈 광고 솔루션(AIvance 제품군)을 위한 **라�
 | 콘솔 | CodeIgniter 4 · PHP 8.4+ · FrankenPHP(권장)/CI4 내장 서버 |
 | frontApi | pure PHP · PSR-7(`nyholm/psr7`) · `nikic/fast-route` · `relay/relay` · `php-di` |
 | DB | MySQL 8 (콘솔=Query Builder / frontApi=PDO prepared) |
-| 인증 | AITessera JWT(HS256) 위임 검증(`JwtLibrary`) |
+| 인증 | AITessera JWT 위임 검증 — RS256 공개키(전환기 HS256 병행), `JwtVerifier` |
 | 라이센스 서명 | Ed25519(libsodium) |
 | 캐시·큐 | Redis(`predis`) |
 | 배치 | `codeigniter4/tasks` 스케줄러 + Spark Command |
@@ -53,7 +53,8 @@ AILicet 은 성형·토탈 광고 솔루션(AIvance 제품군)을 위한 **라�
 ### P0 · 기반
 - **#2 스캐폴딩 & CI** — CI4 프로젝트, `make serve`, composer 스크립트(analyse/test/check), GitHub Actions
 - **#3 DB 스키마** — customers/products/product_modules/licenses/license_history/customer_license/audit_logs 마이그레이션, 도메인 Backed Enum, 타입별 컬럼 → JSON config 정규화
-- **#4 AITessera JWT 인증** — `JwtLibrary`(HS256, alg 고정), `JwtAuthFilter`/`AdminAuthFilter`, 역할 인가, 도메인 예외
+- **#4 AITessera JWT 인증** — `JwtAuthFilter`/`AdminAuthFilter`, 역할 인가, 도메인 예외
+- **#55 JWT 비대칭키(RS256) 전환** — AITessera 토큰 검증을 `JwtVerifier`(RS256 공개키, alg 서버 강제로 혼동 공격 차단)로 전환. 무중단 전환 위해 `JWT_VERIFY_ALGOS` 로 HS256+RS256 병행 후 RS256 단독으로 축소. 자체 발급 토큰은 `JwtLibrary`(HS256) 로 분리
 - **#5 공통 레이아웃·UI** — `aicura.css` 디자인 시스템, 권한별 레이아웃, 로그인, 샘플 대시보드(AG Grid+Chart.js)
 
 ### P1 · 마스터관리
@@ -95,8 +96,13 @@ php spark migrate
 make serve            # FrankenPHP (포트 8300) — 또는 make serve-spark
 ```
 
-`.env` 필수 키: `app.baseURL`, `database.default.*`, `JWT_SECRET`(AITessera 서명키와 동일),
+`.env` 필수 키: `app.baseURL`, `database.default.*`, JWT 검증 키(아래 참고),
 `license.ed25519*`(`php spark license:keygen`).
+
+**JWT 검증 키** — AITessera 토큰 검증 방식은 `JWT_VERIFY_ALGOS`(기본 `HS256,RS256`)로 제어한다.
+- `JWT_PUBLIC_KEY_PATH` — RS256 검증용 AITessera **공개키(PEM)** 경로. AITessera 의 `jwt:keygen` 으로 생성한 공개키만 배치한다(개인키 금지).
+- `JWT_SECRET` — HS256 검증용 공유 시크릿(전환기 한정, AITessera 서명키와 동일). RS256 단독 전환 후 `JWT_VERIFY_ALGOS=RS256` 으로 좁히면 불필요.
+- `LICENSE_TOKEN_SECRET` — 자체 발급 토큰(플로팅 활성화 등)용 HS256 시크릿. 미설정 시 `JWT_SECRET` 폴백.
 
 ### frontApi (pure PHP)
 
@@ -132,12 +138,19 @@ php spark db:seed DemoSeeder     # 대행사(user_id=2)·고객(user_id=3) + 샘
 로그인으로 발급된 토큰이 필요하다. 데모 로그인은 토큰이 없어 이 화면은 안내만 표시된다.
 
 1. [AITessera](https://github.com/pushwing/AITessera) 를 실행한다(예: `php -S localhost:9300 -t public`, 운영자 계정 시드).
-2. AILicet `.env` 에 아래를 설정한다 — `JWT_SECRET` 은 **AITessera 서명키와 동일**해야 토큰 검증이 된다.
+2. AILicet `.env` 에 아래를 설정한다 — AITessera 의 서명 방식(`JWT_ALGO`)에 맞춰 검증 키를 준비한다.
    ```env
    aitessera.baseURL = http://127.0.0.1:9300
-   JWT_SECRET        = <AITessera 와 동일한 시크릿>
+
+   # RS256 (권장) — AITessera 의 jwt:keygen 공개키(PEM)만 배치
+   JWT_VERIFY_ALGOS    = HS256,RS256          # 전환기: 둘 다 허용 → 완료 후 RS256
+   JWT_PUBLIC_KEY_PATH = writable/keys/aitessera_public.pem
+
+   # HS256 (전환기·레거시) — AITessera 서명키와 동일한 값
+   JWT_SECRET          = <AITessera 와 동일한 시크릿>
    ```
    > `aitessera.baseURL` 이 설정되면 데모 빠른 로그인은 비활성화되고 실제 AITessera 인증을 사용한다.
+   > 무중단 전환 절차: AILicet 을 `HS256,RS256` 병행으로 배포 → AITessera `JWT_ALGO=RS256` 전환 → 기존 HS256 토큰 만료 → AILicet `JWT_VERIFY_ALGOS=RS256` 으로 축소.
 3. AITessera 운영자 계정으로 로그인하면 토큰이 세션에 저장되고 회원 계정 관리가 동작한다.
 
 ## 검증

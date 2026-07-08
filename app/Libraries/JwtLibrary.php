@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace App\Libraries;
 
 use App\Exceptions\InvalidTokenException;
-use App\Exceptions\TokenExpiredException;
 use RuntimeException;
 
 /**
  * JWT(HMAC-SHA256) 인코더/디코더 — 외부 라이브러리 없이 직접 구현.
  *
- * AITessera 가 발급한 Access Token(HS256)을 AILicet 이 공유 시크릿으로 검증한다.
+ * AILicet 이 **자체 발급**하는 단기 토큰(예: 플로팅 라이센스 활성화 토큰)의
+ * 서명·검증에 사용한다. 발급·검증을 한 서버가 모두 담당하므로 대칭키(HS256)가 적합하다.
+ *
+ * > AITessera 가 발급한 토큰의 검증은 비대칭키(RS256)를 지원하는 {@see JwtVerifier} 가 담당한다.
+ *
  * 보안:
  * - 헤더 `alg` 를 HS256 으로 고정 → `alg:none`·알고리즘 혼동 공격 차단
  * - 서명 비교는 `hash_equals` (상수 시간)
@@ -19,6 +22,8 @@ use RuntimeException;
  */
 final class JwtLibrary
 {
+    use JwtCodec;
+
     private const string ALGORITHM = 'HS256';
 
     private string $secret;
@@ -31,7 +36,7 @@ final class JwtLibrary
         $secret ??= (string) env('JWT_SECRET');
 
         if (strlen($secret) < 32) {
-            throw new RuntimeException('JWT_SECRET 은 32자 이상이어야 합니다.');
+            throw new RuntimeException('JWT 시크릿은 32자 이상이어야 합니다.');
         }
 
         $this->secret = $secret;
@@ -64,7 +69,7 @@ final class JwtLibrary
      * @return array<string, mixed>
      *
      * @throws InvalidTokenException 형식·서명 오류
-     * @throws TokenExpiredException 만료
+     * @throws \App\Exceptions\TokenExpiredException 만료
      */
     public function decode(string $jwt): array
     {
@@ -85,14 +90,7 @@ final class JwtLibrary
         }
 
         $claims = $this->jsonDecode($this->base64UrlDecode($payload64));
-
-        $now = time();
-        if (isset($claims['exp']) && $now >= (int) $claims['exp']) {
-            throw new TokenExpiredException();
-        }
-        if (isset($claims['nbf']) && $now < (int) $claims['nbf']) {
-            throw new InvalidTokenException('아직 사용할 수 없는 토큰입니다.');
-        }
+        $this->assertTimeClaims($claims);
 
         return $claims;
     }
@@ -100,21 +98,6 @@ final class JwtLibrary
     private function sign(string $data): string
     {
         return $this->base64UrlEncode(hash_hmac('sha256', $data, $this->secret, true));
-    }
-
-    private function base64UrlEncode(string $data): string
-    {
-        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
-    }
-
-    private function base64UrlDecode(string $data): string
-    {
-        $decoded = base64_decode(strtr($data, '-_', '+/'), true);
-        if ($decoded === false) {
-            throw new InvalidTokenException('잘못된 인코딩입니다.');
-        }
-
-        return $decoded;
     }
 
     /**
@@ -128,19 +111,5 @@ final class JwtLibrary
         }
 
         return $json;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function jsonDecode(string $json): array
-    {
-        $data = json_decode($json, true);
-        if (! is_array($data)) {
-            throw new InvalidTokenException('토큰 본문을 해석할 수 없습니다.');
-        }
-
-        /** @var array<string, mixed> $data */
-        return $data;
     }
 }

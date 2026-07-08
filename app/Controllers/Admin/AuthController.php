@@ -104,7 +104,7 @@ final class AuthController extends BaseAdminController
             return null;
         }
 
-        $claims = service('jwt')->decode($token); // 서명·만료 검증(공유 시크릿)
+        $claims = service('aitesseraToken')->decode($token); // 서명·만료 검증(RS256/HS256)
         $data   = is_array($body['data'] ?? null) ? $body['data'] : $body;
 
         return [

@@ -17,7 +17,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 /**
  * REST API 인증 필터 — `Authorization: Bearer <JWT>` 검증.
  *
- * AITessera 발급 토큰을 JwtLibrary(HS256)로 검증한 뒤 Auth 홀더에 사용자 정보를 담는다.
+ * AITessera 발급 토큰을 JwtVerifier(RS256/HS256, `aitesseraToken` 서비스)로 검증한 뒤 Auth 홀더에 사용자 정보를 담는다.
  * 필터 인자로 허용 역할을 지정하면 역할 인가까지 수행한다. 예) `jwt:operator`, `jwt:operator,agency`
  */
 final class JwtAuthFilter implements FilterInterface
@@ -65,7 +65,7 @@ final class JwtAuthFilter implements FilterInterface
             throw new InvalidTokenException('토큰이 비어 있습니다.');
         }
 
-        return service('jwt')->decode($jwt);
+        return service('aitesseraToken')->decode($jwt);
     }
 
     /**
