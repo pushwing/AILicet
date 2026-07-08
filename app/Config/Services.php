@@ -30,6 +30,7 @@ use App\Services\AuditLogQueryService;
 use App\Services\LicenseQueryService;
 use App\Services\NodeLockLicenseService;
 use App\Services\ModuleService;
+use App\Services\NotificationService;
 use App\Services\ProductService;
 use CodeIgniter\Config\BaseService;
 
@@ -285,6 +286,18 @@ class Services extends BaseService
         }
 
         return new AbuseDetectionService();
+    }
+
+    /**
+     * 인앱 메시지(수신함) 서비스.
+     */
+    public static function notificationService(bool $getShared = true): NotificationService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('notificationService');
+        }
+
+        return new NotificationService();
     }
 
     /**
