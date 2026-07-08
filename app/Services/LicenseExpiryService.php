@@ -28,8 +28,10 @@ final class LicenseExpiryService
 
         /** @var list<array<string, mixed>> $rows */
         $rows = model(LicenseModel::class)
-            ->where('status', LicenseStatus::Active->value)
-            ->where('expire_date', $target)
+            ->select('licenses.*, products.name AS product_name')
+            ->join('products', 'products.id = licenses.product_id', 'left')
+            ->where('licenses.status', LicenseStatus::Active->value)
+            ->where('licenses.expire_date', $target)
             ->findAll();
 
         return $rows;
