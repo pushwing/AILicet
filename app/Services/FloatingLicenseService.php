@@ -124,7 +124,7 @@ final class FloatingLicenseService
      */
     public function mintActivationToken(int $licenseId, string $hostId, int $checkTermMinutes): string
     {
-        return service('jwt')->encode([
+        return service('licenseToken')->encode([
             'scope' => self::TOKEN_SCOPE,
             'lic'   => $licenseId,
             'host'  => $hostId,
@@ -139,7 +139,7 @@ final class FloatingLicenseService
     public function verifyActivationToken(string $token): ?array
     {
         try {
-            $claims = service('jwt')->decode($token);
+            $claims = service('licenseToken')->decode($token);
         } catch (InvalidTokenException | TokenExpiredException) {
             return null;
         }

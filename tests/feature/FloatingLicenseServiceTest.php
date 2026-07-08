@@ -34,7 +34,7 @@ final class FloatingLicenseServiceTest extends CIUnitTestCase
     {
         parent::setUp();
         $this->jwt = new JwtLibrary(self::SECRET);
-        Services::injectMock('jwt', $this->jwt);
+        Services::injectMock('licenseToken', $this->jwt);
         $this->service = new FloatingLicenseService();
     }
 

@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Filters\JwtAuthFilter;
 use App\Libraries\Auth;
 use App\Libraries\JwtLibrary;
+use App\Libraries\JwtVerifier;
 use CodeIgniter\Config\Services;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Test\CIUnitTestCase;
@@ -26,8 +27,9 @@ final class JwtAuthFilterTest extends CIUnitTestCase
     {
         parent::setUp();
         Auth::clear();
+        // 토큰 서명은 HS256(JwtLibrary), 검증은 동일 시크릿의 JwtVerifier(HS256 허용)로 수행.
         $this->jwt = new JwtLibrary(self::SECRET);
-        Services::injectMock('jwt', $this->jwt);
+        Services::injectMock('aitesseraToken', new JwtVerifier(['HS256'], self::SECRET));
         $this->filter = new JwtAuthFilter();
     }
 

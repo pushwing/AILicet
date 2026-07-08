@@ -4,6 +4,7 @@ namespace Config;
 
 use App\Integrations\AitesseraClient;
 use App\Libraries\JwtLibrary;
+use App\Libraries\JwtVerifier;
 use App\Libraries\LicenseSigner;
 use App\Notifications\LogNotifier;
 use App\Notifications\Notifier;
@@ -45,15 +46,39 @@ use CodeIgniter\Config\BaseService;
 class Services extends BaseService
 {
     /**
-     * JWT(HS256) 인코더/디코더. 테스트에서 injectMock 으로 시크릿 주입 가능.
+     * AITessera 발급 토큰 검증기. 대칭키(HS256)→비대칭키(RS256) 무중단 전환을 위해
+     * `JWT_VERIFY_ALGOS`(기본 `HS256,RS256`)로 허용 알고리즘을 제어한다. 전환 완료 후
+     * `JWT_VERIFY_ALGOS=RS256` 으로 좁히면 코드 변경 없이 HS256 을 차단한다.
+     *
+     * 테스트에서 injectMock('aitesseraToken', ...) 으로 대체 가능.
      */
-    public static function jwt(bool $getShared = true): JwtLibrary
+    public static function aitesseraToken(bool $getShared = true): JwtVerifier
     {
         if ($getShared) {
-            return static::getSharedInstance('jwt');
+            return static::getSharedInstance('aitesseraToken');
         }
 
-        return new JwtLibrary();
+        return JwtVerifier::fromConfig();
+    }
+
+    /**
+     * AILicet 자체 발급 토큰(플로팅 라이센스 활성화 등)용 HS256 서명기.
+     * 전용 시크릿 `LICENSE_TOKEN_SECRET`, 미설정 시 `JWT_SECRET` 으로 폴백한다.
+     *
+     * 테스트에서 injectMock('licenseToken', ...) 으로 대체 가능.
+     */
+    public static function licenseToken(bool $getShared = true): JwtLibrary
+    {
+        if ($getShared) {
+            return static::getSharedInstance('licenseToken');
+        }
+
+        $secret = (string) env('LICENSE_TOKEN_SECRET');
+        if ($secret === '') {
+            $secret = (string) env('JWT_SECRET');
+        }
+
+        return new JwtLibrary($secret);
     }
 
     /**
