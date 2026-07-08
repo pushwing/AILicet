@@ -22,6 +22,7 @@ use App\Services\AgencyService;
 use App\Services\ClientService;
 use App\Services\ClientSignupService;
 use App\Services\CustomerService;
+use App\Services\DashboardService;
 use App\Services\FloatingLicenseService;
 use App\Services\LicenseLifecycleService;
 use App\Services\LicensePolicyValidator;
@@ -207,6 +208,18 @@ class Services extends BaseService
         }
 
         return new LicenseQueryService();
+    }
+
+    /**
+     * 대시보드 집계(통계·차트·최근 라이선스) 서비스.
+     */
+    public static function dashboardService(bool $getShared = true): DashboardService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('dashboardService');
+        }
+
+        return new DashboardService();
     }
 
     /**

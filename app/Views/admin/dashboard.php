@@ -8,7 +8,7 @@
 <?= $this->section('content') ?>
 <div class="page-head">
     <h1 class="page-head__title">대시보드</h1>
-    <p class="page-head__desc">라이선스 발급·사용 현황 요약 (샘플 데이터)</p>
+    <p class="page-head__desc">라이선스 발급·사용 현황 요약</p>
 </div>
 
 <!-- 통계 카드 -->
@@ -67,7 +67,7 @@
 
     // 그리드 — 컨트롤러 전달 데이터
     const statusRenderer = (p) => {
-        const map = { active: ['badge--success','정상'], suspended: ['badge--warning','중지'], terminated: ['badge--danger','종료'] };
+        const map = { active: ['badge--success','정상'], suspended: ['badge--warning','중지'], terminated: ['badge--danger','종료'], archived: ['badge--muted','보관'] };
         const [cls, label] = map[p.value] || ['badge--muted', p.value];
         return `<span class="badge ${cls}">${label}</span>`;
     };
