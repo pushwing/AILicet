@@ -9,9 +9,10 @@
 $isEdit        = $customer !== null;
 $action        = $isEdit ? '/admin/members/' . $customer['id'] : '/admin/members';
 $val           = static fn (string $k, string $d = ''): string => esc((string) ($customer[$k] ?? old($k) ?? $d));
-$clients       = $clients ?? [];
-$linkedAccount = $linkedAccount ?? null;
-$isAgency      = $isEdit && ($customer['customer_type'] ?? '') === 'agency';
+$clients            = $clients ?? [];
+$linkedAccount      = $linkedAccount ?? null;
+$linkedLookupFailed = $linkedLookupFailed ?? false;
+$isAgency           = $isEdit && ($customer['customer_type'] ?? '') === 'agency';
 ?>
 <?= $this->extend('layouts/app') ?>
 
@@ -86,7 +87,7 @@ $isAgency      = $isEdit && ($customer['customer_type'] ?? '') === 'agency';
                                 </span>
                             <?php endif; ?>
                         </p>
-                    <?php elseif ($val('user_id') !== ''): ?>
+                    <?php elseif ($linkedLookupFailed): ?>
                         <p class="muted" style="margin:6px 0 0;font-size:13px;">연동 계정 정보를 불러오지 못했습니다.</p>
                     <?php endif; ?>
                 </div>
