@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\DTO\CustomerRequest;
+use App\Exceptions\AitesseraException;
 use App\Models\CustomerModel;
 use RuntimeException;
 
@@ -63,6 +64,64 @@ final class CustomerService
         $row = model(CustomerModel::class)->find($id);
 
         return $row;
+    }
+
+    /**
+     * 대행사에 소속된 하위 고객 목록(대행사 상세용).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function childClients(int $agencyId): array
+    {
+        return model(CustomerModel::class)->clientsOf($agencyId);
+    }
+
+    /**
+     * 회원 레코드의 AITessera 연동 계정 정보(이메일·이름 병기용).
+     *
+     * 표시 전용 베스트에포트 — 조회를 시도하지 않는 경우(토큰·user_id 없음)는 null 을 반환한다.
+     * 조회를 시도한 경우는 결과를 상태로 구분한다:
+     * - found  : 계정 정보 조회 성공
+     * - missing: AITessera 에 해당 user_id 가 없음(404) — 연동 값이 잘못됨(조치 필요)
+     * - error  : 그 외 통신·인증 오류(일시적)
+     *
+     * @return array{status:'found', id:int, email:?string, name:?string, is_active:?bool}
+     *              |array{status:'missing'|'error', id:int}
+     *              |null
+     */
+    public function linkedAccount(?int $userId, ?string $token): ?array
+    {
+        if ($userId === null || $userId <= 0 || $token === null) {
+            return null;
+        }
+
+        try {
+            $user = service('aitesseraClient')->getUser($token, $userId);
+        } catch (AitesseraException $e) {
+            // 표시 전용이라 화면은 깨지 않지만, 원인 파악을 위해 최소 로깅한다.
+            log_message('warning', 'linkedAccount getUser 실패 [user_id={id}] {code}({status}): {msg}', [
+                'id'     => $userId,
+                'code'   => $e->errorCode(),
+                'status' => $e->httpStatusCode(),
+                'msg'    => $e->getMessage(),
+            ]);
+
+            return ['status' => $e->httpStatusCode() === 404 ? 'missing' : 'error', 'id' => $userId];
+        }
+
+        if ($user === []) {
+            log_message('warning', 'linkedAccount getUser 응답 비어있음 [user_id={id}]', ['id' => $userId]);
+
+            return ['status' => 'missing', 'id' => $userId];
+        }
+
+        return [
+            'status'    => 'found',
+            'id'        => $userId,
+            'email'     => isset($user['email']) ? (string) $user['email'] : null,
+            'name'      => isset($user['name']) ? (string) $user['name'] : null,
+            'is_active' => isset($user['is_active']) ? (bool) $user['is_active'] : null,
+        ];
     }
 
     /**

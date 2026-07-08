@@ -1,18 +1,16 @@
 <?php
 /**
  * @var array<string, mixed>|null $account
- * @var list<\App\Enums\UserRole>  $roles
  */
 $isEdit = $account !== null;
 $action = $isEdit ? '/admin/accounts/' . $account['id'] : '/admin/accounts';
 $val    = static fn (string $k): string => esc((string) ($account[$k] ?? old($k) ?? ''));
-$roleLabels = [1 => '운영자', 2 => '대행사', 3 => '일반회원'];
 ?>
 <?= $this->extend('layouts/app') ?>
 <?= $this->section('content') ?>
 <div class="page-head">
-    <h1 class="page-head__title"><?= $isEdit ? '회원 수정' : '계정 생성' ?></h1>
-    <p class="page-head__desc"><?= $isEdit ? 'AITessera 회원 정보를 수정합니다.' : '운영자/대행사/일반회원 계정을 생성합니다(이메일 인증 즉시 완료).' ?></p>
+    <h1 class="page-head__title"><?= $isEdit ? '운영자 수정' : '운영자 등록' ?></h1>
+    <p class="page-head__desc"><?= $isEdit ? 'AITessera 운영자 정보를 수정합니다.' : '신규 운영자 계정을 생성합니다(이메일 인증 즉시 완료).' ?></p>
 </div>
 
 <?php if (session()->getFlashdata('error')): ?><div class="alert alert--danger"><?= esc(session()->getFlashdata('error')) ?></div><?php endif; ?>
@@ -26,21 +24,6 @@ $roleLabels = [1 => '운영자', 2 => '대행사', 3 => '일반회원'];
                 <input class="input" type="email" id="email" name="email" value="<?= $val('email') ?>"
                        <?= $isEdit ? 'disabled' : 'required' ?>>
             </div>
-            <?php if (! $isEdit): ?>
-                <div class="field">
-                    <label class="field__label" for="role">회원 구분 *</label>
-                    <select class="input" id="role" name="role" required>
-                        <?php foreach ($roleLabels as $v => $label): ?>
-                            <option value="<?= $v ?>" <?= (string) old('role') === (string) $v ? 'selected' : '' ?>><?= esc($label) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            <?php else: ?>
-                <div class="field">
-                    <label class="field__label">회원 구분</label>
-                    <input class="input" value="<?= esc($roleLabels[(int) ($account['role'] ?? 0)] ?? '-') ?>" disabled>
-                </div>
-            <?php endif; ?>
             <div class="field">
                 <label class="field__label" for="name">이름 *</label>
                 <input class="input" id="name" name="name" value="<?= $val('name') ?>" <?= $isEdit ? '' : 'required' ?>>

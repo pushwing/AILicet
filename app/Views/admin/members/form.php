@@ -1,12 +1,18 @@
 <?php
 /**
- * @var array<string, mixed>|null              $customer
- * @var list<\App\Enums\CustomerType>          $types
- * @var list<array{id:int, company_name:string}> $agencies
+ * @var array<string, mixed>|null                                           $customer
+ * @var list<\App\Enums\CustomerType>                                        $types
+ * @var list<array{id:int, company_name:string}>                            $agencies
+ * @var list<array<string, mixed>>                                          $clients
+ * @var array{id:int, email:?string, name:?string, is_active:?bool}|null    $linkedAccount
  */
-$isEdit = $customer !== null;
-$action = $isEdit ? '/admin/members/' . $customer['id'] : '/admin/members';
-$val    = static fn (string $k, string $d = ''): string => esc((string) ($customer[$k] ?? old($k) ?? $d));
+$isEdit        = $customer !== null;
+$action        = $isEdit ? '/admin/members/' . $customer['id'] : '/admin/members';
+$val           = static fn (string $k, string $d = ''): string => esc((string) ($customer[$k] ?? old($k) ?? $d));
+$clients       = $clients ?? [];
+$linkedAccount = $linkedAccount ?? null;
+$linkedStatus  = $linkedAccount['status'] ?? null; // found | missing | error | null(조회 안 함)
+$isAgency      = $isEdit && ($customer['customer_type'] ?? '') === 'agency';
 ?>
 <?= $this->extend('layouts/app') ?>
 
@@ -68,6 +74,26 @@ $val    = static fn (string $k, string $d = ''): string => esc((string) ($custom
                         <span class="muted" style="font-weight:400;">(AITessera user_id — 대행사/고객 로그인 연결)</span>
                     </label>
                     <input class="input" type="number" id="user_id" name="user_id" value="<?= $val('user_id') ?>">
+                    <?php if ($linkedStatus === 'found'): ?>
+                        <p class="muted" style="margin:6px 0 0;font-size:13px;">
+                            연동 계정:
+                            <strong><?= esc((string) ($linkedAccount['name'] ?? '-')) ?></strong>
+                            <?php if (! empty($linkedAccount['email'])): ?>
+                                &lt;<?= esc((string) $linkedAccount['email']) ?>&gt;
+                            <?php endif; ?>
+                            <?php if (($linkedAccount['is_active'] ?? null) !== null): ?>
+                                <span class="badge <?= $linkedAccount['is_active'] ? 'badge--success' : 'badge--muted' ?>">
+                                    <?= $linkedAccount['is_active'] ? '활성' : '비활성' ?>
+                                </span>
+                            <?php endif; ?>
+                        </p>
+                    <?php elseif ($linkedStatus === 'missing'): ?>
+                        <p style="margin:6px 0 0;font-size:13px;color:var(--color-danger,#c0392b);">
+                            AITessera에 해당 연동 계정(#<?= esc((string) $linkedAccount['id']) ?>)이 없습니다. 사용자 ID를 확인해 주세요.
+                        </p>
+                    <?php elseif ($linkedStatus === 'error'): ?>
+                        <p class="muted" style="margin:6px 0 0;font-size:13px;">연동 계정 정보를 일시적으로 불러오지 못했습니다.</p>
+                    <?php endif; ?>
                 </div>
                 <div class="field">
                     <label class="field__label" for="is_active">상태</label>
@@ -85,6 +111,55 @@ $val    = static fn (string $k, string $d = ''): string => esc((string) ($custom
         <a href="/admin/members" class="btn btn--ghost">취소</a>
     </div>
 </form>
+
+<?php if ($isAgency): ?>
+    <div class="card" style="margin-top:24px;">
+        <div class="card__head" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>하위 고객 <span class="muted" style="font-weight:400;">(<?= count($clients) ?>)</span></span>
+            <a href="/admin/members/new" class="btn btn--ghost" style="padding:4px 12px;">+ 고객 등록</a>
+        </div>
+        <div class="card__body">
+            <?php if ($clients === []): ?>
+                <p class="muted" style="margin:0;">이 대행사에 연결된 하위 고객이 없습니다.</p>
+            <?php else: ?>
+                <table class="table" style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="text-align:left;border-bottom:1px solid var(--color-border);">
+                            <th style="padding:8px;">회사명</th>
+                            <th style="padding:8px;">담당자</th>
+                            <th style="padding:8px;">이메일</th>
+                            <th style="padding:8px;">연락처</th>
+                            <th style="padding:8px;">연동 ID</th>
+                            <th style="padding:8px;">상태</th>
+                            <th style="padding:8px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($clients as $c): ?>
+                            <tr style="border-bottom:1px solid var(--color-border);">
+                                <td style="padding:8px;"><?= esc((string) ($c['company_name'] ?? '')) ?></td>
+                                <td style="padding:8px;"><?= esc((string) ($c['name'] ?? '')) ?></td>
+                                <td style="padding:8px;"><?= esc((string) ($c['email'] ?? '')) ?></td>
+                                <td style="padding:8px;"><?= esc((string) ($c['phone'] ?? '-')) ?></td>
+                                <td style="padding:8px;"><?= $c['user_id'] !== null ? esc((string) $c['user_id']) : '-' ?></td>
+                                <td style="padding:8px;">
+                                    <?php if ((int) ($c['is_active'] ?? 0) === 1): ?>
+                                        <span class="badge badge--success">활성</span>
+                                    <?php else: ?>
+                                        <span class="badge badge--muted">비활성</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="padding:8px;">
+                                    <a class="btn btn--ghost" style="padding:4px 10px;" href="/admin/members/<?= esc((string) $c['id']) ?>/edit">수정</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+        </div>
+    </div>
+<?php endif; ?>
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
