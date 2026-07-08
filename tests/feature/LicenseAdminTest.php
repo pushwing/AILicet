@@ -162,10 +162,14 @@ final class LicenseAdminTest extends CIUnitTestCase
         $license = model(LicenseModel::class)->orderBy('id', 'DESC')->first();
         $id      = (int) $license['id'];
 
-        // 상세
+        // 상세 — 상품 정보·모듈 카드(이슈 #61)
         $show = $this->withSession($this->operator())->get("admin/licenses/{$id}");
         $show->assertStatus(200);
         $show->assertSee('라이센스 정보');
+        $show->assertSee('상품 정보');
+        $show->assertSee('제품군');
+        $show->assertSee('모듈');
+        $show->assertSee('정량분석'); // 발급된 모듈명 표기
 
         // 정지 → 종료
         $this->withSession($this->operator())->post("admin/licenses/{$id}/suspend", ['reason' => '미납']);
