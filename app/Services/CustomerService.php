@@ -91,11 +91,21 @@ final class CustomerService
 
         try {
             $user = service('aitesseraClient')->getUser($token, $userId);
-        } catch (AitesseraException) {
+        } catch (AitesseraException $e) {
+            // 표시 전용이라 화면은 깨지 않지만, 원인 파악을 위해 최소 로깅한다.
+            log_message('warning', 'linkedAccount getUser 실패 [user_id={id}] {code}({status}): {msg}', [
+                'id'     => $userId,
+                'code'   => $e->errorCode(),
+                'status' => $e->httpStatusCode(),
+                'msg'    => $e->getMessage(),
+            ]);
+
             return null;
         }
 
         if ($user === []) {
+            log_message('warning', 'linkedAccount getUser 응답 비어있음 [user_id={id}]', ['id' => $userId]);
+
             return null;
         }
 
