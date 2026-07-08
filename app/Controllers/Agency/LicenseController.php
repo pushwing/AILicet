@@ -121,7 +121,12 @@ final class LicenseController extends BaseAgencyController
             if ($type === LicenseType::Floating->value) {
                 $result = service('floatingLicenseService')->issue(FloatingIssueRequest::fromArray($payload));
             } else {
-                $payload['host_id'] = (string) $this->request->getPost('host_id');
+                $host = NodeLockIssueRequest::normalizeHostId((string) $this->request->getPost('host_id'));
+                if ($host === null) {
+                    return redirect()->back()->withInput()
+                        ->with('error', '호스트ID 형식이 올바르지 않습니다. 예: 9F3A-1C7B-E204-8DD6 (tools/hostid 유틸리티로 산출)');
+                }
+                $payload['host_id'] = $host;
                 $result = service('nodeLockLicenseService')->issue(NodeLockIssueRequest::fromArray($payload));
             }
         } catch (RuntimeException $e) {

@@ -108,7 +108,10 @@ $issuedModules = array_fill_keys($licenseModules, true);
                       onsubmit="return confirm('재발급하면 이전 키가 폐기됩니다. 진행할까요?');">
                     <?= csrf_field() ?>
                     <?php if ($isNode): ?>
-                        <input class="input" name="host_id" placeholder="새 호스트ID(선택)">
+                        <input class="input" name="host_id" placeholder="새 호스트ID(선택) 예: 9F3A-1C7B-E204-8DD6"
+                               pattern="[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}"
+                               title="XXXX-XXXX-XXXX-XXXX 형식 (hostid 유틸리티로 산출)"
+                               style="text-transform:uppercase">
                     <?php endif; ?>
                     <button class="btn btn--ghost">재발급</button>
                 </form>

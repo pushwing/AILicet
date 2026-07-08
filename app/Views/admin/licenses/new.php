@@ -84,7 +84,12 @@
                 <!-- 노드락 전용 -->
                 <div class="field nodelock-only">
                     <label class="field__label" for="host_id">호스트ID (유니크키) *</label>
-                    <input class="input" id="host_id" name="host_id" placeholder="머신 고유값">
+                    <input class="input" id="host_id" name="host_id"
+                           placeholder="예: 9F3A-1C7B-E204-8DD6"
+                           pattern="[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}"
+                           title="XXXX-XXXX-XXXX-XXXX 형식 (hostid 유틸리티로 산출)"
+                           style="text-transform:uppercase">
+                    <small style="display:block;margin-top:4px;color:#6b7280;font-size:12px;">고객이 <code>hostid</code> 유틸리티로 산출한 값을 붙여넣으세요.</small>
                 </div>
 
                 <!-- 플로팅 전용 -->

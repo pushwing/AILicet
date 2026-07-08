@@ -118,7 +118,7 @@ final class LicenseAdminTest extends CIUnitTestCase
             'license_type'     => 'nodelock',
             'product_id'       => $pid,
             'period_code'      => 'period',
-            'host_id'          => 'HOST-UI-001',
+            'host_id'          => 'AAAA-BBBB-CCCC-0001',
             'expire_date'      => '2027-12-31',
             'support_end_date' => '2028-06-30',
             'modules'          => ['MD001'],
@@ -128,7 +128,7 @@ final class LicenseAdminTest extends CIUnitTestCase
         $this->seeInDatabase('licenses', [
             'product_id'   => $pid,
             'license_type' => LicenseType::NodeLock->value,
-            'host_id'      => 'HOST-UI-001',
+            'host_id'      => 'AAAA-BBBB-CCCC-0001',
             'status'       => LicenseStatus::Active->value,
         ]);
     }
@@ -156,7 +156,7 @@ final class LicenseAdminTest extends CIUnitTestCase
         // 발급
         $this->withSession($this->operator())->post('admin/licenses', [
             'license_type' => 'nodelock', 'product_id' => $pid, 'period_code' => 'period',
-            'host_id' => 'HOST-A', 'expire_date' => '2027-12-31', 'support_end_date' => '2028-06-30', 'modules' => ['MD001'],
+            'host_id' => 'AAAA-BBBB-CCCC-000A', 'expire_date' => '2027-12-31', 'support_end_date' => '2028-06-30', 'modules' => ['MD001'],
         ]);
         /** @var array<string,mixed> $license */
         $license = model(LicenseModel::class)->orderBy('id', 'DESC')->first();
@@ -185,7 +185,7 @@ final class LicenseAdminTest extends CIUnitTestCase
         $pid = $this->seedProduct('nodelock');
         $this->withSession($this->operator())->post('admin/licenses', [
             'license_type' => 'nodelock', 'product_id' => $pid, 'period_code' => 'period',
-            'host_id' => 'HOST-DL', 'expire_date' => '2027-12-31', 'support_end_date' => '2028-06-30', 'modules' => ['MD001'],
+            'host_id' => 'DDDD-DDDD-DDDD-DD01', 'expire_date' => '2027-12-31', 'support_end_date' => '2028-06-30', 'modules' => ['MD001'],
         ]);
         /** @var array<string,mixed> $license */
         $license = model(LicenseModel::class)->orderBy('id', 'DESC')->first();
@@ -203,7 +203,7 @@ final class LicenseAdminTest extends CIUnitTestCase
         $this->assertIsArray($envelope);
         $this->assertSame('Ed25519', $envelope['alg']);
         $payload = json_decode(base64_decode((string) $envelope['data'], true) ?: '', true);
-        $this->assertSame('HOST-DL', $payload['host_id']);
+        $this->assertSame('DDDD-DDDD-DDDD-DD01', $payload['host_id']);
     }
 
     public function testReissueGeneratesNewKey(): void
@@ -211,15 +211,15 @@ final class LicenseAdminTest extends CIUnitTestCase
         $pid = $this->seedProduct('nodelock');
         $this->withSession($this->operator())->post('admin/licenses', [
             'license_type' => 'nodelock', 'product_id' => $pid, 'period_code' => 'period',
-            'host_id' => 'HOST-R', 'expire_date' => '2027-12-31', 'support_end_date' => '2028-06-30', 'modules' => ['MD001'],
+            'host_id' => '1111-2222-3333-4444', 'expire_date' => '2027-12-31', 'support_end_date' => '2028-06-30', 'modules' => ['MD001'],
         ]);
         /** @var array<string,mixed> $license */
         $license = model(LicenseModel::class)->orderBy('id', 'DESC')->first();
         $id      = (int) $license['id'];
 
-        $this->withSession($this->operator())->post("admin/licenses/{$id}/reissue", ['host_id' => 'HOST-R2']);
+        $this->withSession($this->operator())->post("admin/licenses/{$id}/reissue", ['host_id' => '5555-6666-7777-8888']);
 
-        $this->seeInDatabase('licenses', ['id' => $id, 'host_id' => 'HOST-R2']);
+        $this->seeInDatabase('licenses', ['id' => $id, 'host_id' => '5555-6666-7777-8888']);
         $this->assertSame(1, model(\App\Models\LicenseHistoryModel::class)
             ->where('license_id', $id)->where('type', HistoryType::Reissue->value)->countAllResults());
     }

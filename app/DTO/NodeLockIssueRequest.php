@@ -12,6 +12,14 @@ namespace App\DTO;
 final readonly class NodeLockIssueRequest
 {
     /**
+     * 호스트ID 표준 형식(XXXX-XXXX-XXXX-XXXX, 대문자 hex).
+     *
+     * tools/hostid 유틸리티가 산출하는 형식과 일치한다. 이 형식·규칙은 라이센스 런타임
+     * 검증과 맞물려 있으므로 변경 시 tools/hostid 와 함께 조정해야 한다.
+     */
+    public const string HOST_ID_PATTERN = '/^[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$/';
+
+    /**
      * @param list<string>      $modules 모듈 코드 목록
      * @param array<string,int> $limits  사용량 제한 {count?, credit?}
      */
@@ -32,6 +40,20 @@ final readonly class NodeLockIssueRequest
         public bool $isTrial = false,
         public array $limits = [],
     ) {
+    }
+
+    /**
+     * 사용자 입력 호스트ID 를 정규화·검증한다.
+     *
+     * 대문자·trim 정규화 후 표준 형식과 일치하면 정규화값을, 아니면 null 을 반환한다.
+     * 발급·재발급 폼 등 **입력 경계에서만** 사용한다. DB 에 저장된 레거시 host_id 를
+     * 재구성(재발급 파일 재생성 등)할 때는 호출하지 않는다 — 구형 값은 형식이 다를 수 있다.
+     */
+    public static function normalizeHostId(string $raw): ?string
+    {
+        $host = strtoupper(trim($raw));
+
+        return preg_match(self::HOST_ID_PATTERN, $host) === 1 ? $host : null;
     }
 
     /**
