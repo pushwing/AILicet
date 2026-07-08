@@ -106,7 +106,7 @@ final class ProductService
         $db = db_connect();
         $db->transStart();
 
-        $productId = (int) ($this->products->insert($dto->toProductRow(), true) ?: 0);
+        $productId = (int) ($this->products->insert($this->rowWithSanitizedDescription($dto), true) ?: 0);
         if ($productId === 0) {
             throw new RuntimeException($this->firstError($this->products->errors()));
         }
@@ -137,7 +137,7 @@ final class ProductService
         $db->transStart();
 
         // is_unique[...,{id}] 플레이스홀더 치환용으로 id 포함(allowedFields 밖이라 실제 SET 에는 미반영)
-        $row       = $dto->toProductRow();
+        $row       = $this->rowWithSanitizedDescription($dto);
         $row['id'] = $id;
         if ($this->products->update($id, $row) === false) {
             throw new RuntimeException($this->firstError($this->products->errors()));
@@ -166,6 +166,24 @@ final class ProductService
 
         $this->products->delete($id);
         $this->invalidateCache();
+    }
+
+    /**
+     * 저장용 상품 행을 만들고 description 을 화이트리스트 정화한다.
+     *
+     * 정화는 저장 경계(create/update)에서 단일 수행 → DB 엔 안전한 HTML 만 보관하고
+     * 출력은 신뢰하고 그대로 렌더한다.
+     *
+     * @return array{product_code:string, name:string, description:?string, product_family:?string, license_type:string, version:?string, period_code:?string, is_active:int}
+     */
+    private function rowWithSanitizedDescription(ProductRequest $dto): array
+    {
+        $row = $dto->toProductRow();
+
+        $clean              = service('htmlSanitizer')->sanitize((string) $dto->description);
+        $row['description'] = $clean === '' ? null : $clean;
+
+        return $row;
     }
 
     /**

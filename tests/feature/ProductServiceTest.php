@@ -50,6 +50,7 @@ final class ProductServiceTest extends CIUnitTestCase
             productCode: $code,
             name: 'tES LAB',
             licenseType: 'nodelock',
+            description: null,
             productFamily: 'teslab',
             version: $versions[0] ?? '3.0.1',
             periodCode: 'period',
@@ -107,6 +108,7 @@ final class ProductServiceTest extends CIUnitTestCase
             productCode: 'PT200',
             name: 'tES LAB v2',
             licenseType: 'floating',
+            description: null,
             productFamily: 'teslab',
             version: '4.0',
             periodCode: 'perpetual_count',
@@ -165,6 +167,50 @@ final class ProductServiceTest extends CIUnitTestCase
         $this->seeInDatabase('product_versions', ['product_id' => $id, 'version' => '1.0.1', 'is_active' => 1]);
         // 중복 삽입 없이 단일 레코드 유지
         $this->assertSame(1, model(\App\Models\ProductVersionModel::class)->where('product_id', $id)->countAllResults());
+    }
+
+    public function testCreateSanitizesDescription(): void
+    {
+        // 저장 경계에서 위험 태그가 제거되고 허용 태그는 보존돼야 한다.
+        $dto = new ProductRequest(
+            productCode: 'PT600',
+            name: 'tES LAB',
+            licenseType: 'nodelock',
+            description: '<p>소개 <strong>강조</strong></p><script>alert(1)</script>',
+            productFamily: 'teslab',
+            version: '1.0',
+            periodCode: 'period',
+            isActive: true,
+            moduleIds: [],
+        );
+        $id    = $this->service->create($dto);
+        $found = $this->service->find($id);
+
+        $this->assertNotNull($found);
+        $desc = (string) $found['product']['description'];
+        $this->assertStringContainsString('<strong>강조</strong>', $desc);
+        $this->assertStringNotContainsString('<script', $desc);
+    }
+
+    public function testCreateStoresNullForEmptyDescription(): void
+    {
+        // 태그만 있는 빈 콘텐츠는 NULL 로 저장한다.
+        $dto = new ProductRequest(
+            productCode: 'PT610',
+            name: 'tES LAB',
+            licenseType: 'nodelock',
+            description: '<p></p>',
+            productFamily: null,
+            version: '1.0',
+            periodCode: null,
+            isActive: true,
+            moduleIds: [],
+        );
+        $id    = $this->service->create($dto);
+        $found = $this->service->find($id);
+
+        $this->assertNotNull($found);
+        $this->assertNull($found['product']['description']);
     }
 
     public function testDeleteSoftDeletesProduct(): void

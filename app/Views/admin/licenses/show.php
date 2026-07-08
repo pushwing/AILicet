@@ -145,6 +145,13 @@ $issuedModules = array_fill_keys($licenseModules, true);
                 <?= $row('기본 종류', $prodType?->label()) ?>
                 <?= $row('기본 기간정책', $prodPeriod?->label()) ?>
                 <?= $row('상품 상태', ! empty($product['is_active']) ? '활성' : '비활성') ?>
+                <?php if (! empty($product['description'])): ?>
+                    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--color-border);">
+                        <div class="muted" style="font-size:12px;margin-bottom:6px;">상품 설명</div>
+                        <?php /* 저장 시점 화이트리스트 정화된 HTML — 신뢰하고 그대로 렌더 */ ?>
+                        <div class="rte-content"><?= $product['description'] ?></div>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </div>
