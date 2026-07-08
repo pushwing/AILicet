@@ -79,9 +79,15 @@ final class CustomerService
     /**
      * 회원 레코드의 AITessera 연동 계정 정보(이메일·이름 병기용).
      *
-     * 표시 전용 베스트에포트 — 토큰 없음·조회 실패 시 null 을 반환하고 화면은 user_id 만 노출한다.
+     * 표시 전용 베스트에포트 — 조회를 시도하지 않는 경우(토큰·user_id 없음)는 null 을 반환한다.
+     * 조회를 시도한 경우는 결과를 상태로 구분한다:
+     * - found  : 계정 정보 조회 성공
+     * - missing: AITessera 에 해당 user_id 가 없음(404) — 연동 값이 잘못됨(조치 필요)
+     * - error  : 그 외 통신·인증 오류(일시적)
      *
-     * @return array{id:int, email:?string, name:?string, is_active:?bool}|null
+     * @return array{status:'found', id:int, email:?string, name:?string, is_active:?bool}
+     *              |array{status:'missing'|'error', id:int}
+     *              |null
      */
     public function linkedAccount(?int $userId, ?string $token): ?array
     {
@@ -100,16 +106,17 @@ final class CustomerService
                 'msg'    => $e->getMessage(),
             ]);
 
-            return null;
+            return ['status' => $e->httpStatusCode() === 404 ? 'missing' : 'error', 'id' => $userId];
         }
 
         if ($user === []) {
             log_message('warning', 'linkedAccount getUser 응답 비어있음 [user_id={id}]', ['id' => $userId]);
 
-            return null;
+            return ['status' => 'missing', 'id' => $userId];
         }
 
         return [
+            'status'    => 'found',
             'id'        => $userId,
             'email'     => isset($user['email']) ? (string) $user['email'] : null,
             'name'      => isset($user['name']) ? (string) $user['name'] : null,

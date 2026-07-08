@@ -137,13 +137,29 @@ final class CustomerServiceTest extends CIUnitTestCase
         $result = $this->service->linkedAccount(7, 'token');
 
         $this->assertNotNull($result);
+        $this->assertSame('found', $result['status']);
         $this->assertSame(7, $result['id']);
         $this->assertSame('link@n.com', $result['email']);
         $this->assertSame('연동회원', $result['name']);
         $this->assertTrue($result['is_active']);
     }
 
-    public function testLinkedAccountReturnsNullOnAitesseraFailure(): void
+    public function testLinkedAccountMissingWhenNotFound(): void
+    {
+        $client = new class ('http://aitessera') extends AitesseraClient {
+            public function getUser(string $token, int $id): array
+            {
+                throw new \App\Exceptions\AitesseraException('회원을 찾을 수 없습니다.', 'NOT_FOUND', 404);
+            }
+        };
+        Services::injectMock('aitesseraClient', $client);
+
+        $result = $this->service->linkedAccount(7, 'token');
+        $this->assertSame('missing', $result['status']);
+        $this->assertSame(7, $result['id']);
+    }
+
+    public function testLinkedAccountErrorOnOtherFailure(): void
     {
         $client = new class ('http://aitessera') extends AitesseraClient {
             public function getUser(string $token, int $id): array
@@ -153,7 +169,8 @@ final class CustomerServiceTest extends CIUnitTestCase
         };
         Services::injectMock('aitesseraClient', $client);
 
-        $this->assertNull($this->service->linkedAccount(7, 'token'));
+        $result = $this->service->linkedAccount(7, 'token');
+        $this->assertSame('error', $result['status']);
     }
 
     public function testPaginateSearchAndTypeFilter(): void

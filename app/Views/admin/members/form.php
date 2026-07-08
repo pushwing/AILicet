@@ -9,10 +9,10 @@
 $isEdit        = $customer !== null;
 $action        = $isEdit ? '/admin/members/' . $customer['id'] : '/admin/members';
 $val           = static fn (string $k, string $d = ''): string => esc((string) ($customer[$k] ?? old($k) ?? $d));
-$clients            = $clients ?? [];
-$linkedAccount      = $linkedAccount ?? null;
-$linkedLookupFailed = $linkedLookupFailed ?? false;
-$isAgency           = $isEdit && ($customer['customer_type'] ?? '') === 'agency';
+$clients       = $clients ?? [];
+$linkedAccount = $linkedAccount ?? null;
+$linkedStatus  = $linkedAccount['status'] ?? null; // found | missing | error | null(조회 안 함)
+$isAgency      = $isEdit && ($customer['customer_type'] ?? '') === 'agency';
 ?>
 <?= $this->extend('layouts/app') ?>
 
@@ -74,21 +74,25 @@ $isAgency           = $isEdit && ($customer['customer_type'] ?? '') === 'agency'
                         <span class="muted" style="font-weight:400;">(AITessera user_id — 대행사/고객 로그인 연결)</span>
                     </label>
                     <input class="input" type="number" id="user_id" name="user_id" value="<?= $val('user_id') ?>">
-                    <?php if ($linkedAccount !== null): ?>
+                    <?php if ($linkedStatus === 'found'): ?>
                         <p class="muted" style="margin:6px 0 0;font-size:13px;">
                             연동 계정:
                             <strong><?= esc((string) ($linkedAccount['name'] ?? '-')) ?></strong>
                             <?php if (! empty($linkedAccount['email'])): ?>
                                 &lt;<?= esc((string) $linkedAccount['email']) ?>&gt;
                             <?php endif; ?>
-                            <?php if ($linkedAccount['is_active'] !== null): ?>
+                            <?php if (($linkedAccount['is_active'] ?? null) !== null): ?>
                                 <span class="badge <?= $linkedAccount['is_active'] ? 'badge--success' : 'badge--muted' ?>">
                                     <?= $linkedAccount['is_active'] ? '활성' : '비활성' ?>
                                 </span>
                             <?php endif; ?>
                         </p>
-                    <?php elseif ($linkedLookupFailed): ?>
-                        <p class="muted" style="margin:6px 0 0;font-size:13px;">연동 계정 정보를 불러오지 못했습니다.</p>
+                    <?php elseif ($linkedStatus === 'missing'): ?>
+                        <p style="margin:6px 0 0;font-size:13px;color:var(--color-danger,#c0392b);">
+                            AITessera에 해당 연동 계정(#<?= esc((string) $linkedAccount['id']) ?>)이 없습니다. 사용자 ID를 확인해 주세요.
+                        </p>
+                    <?php elseif ($linkedStatus === 'error'): ?>
+                        <p class="muted" style="margin:6px 0 0;font-size:13px;">연동 계정 정보를 일시적으로 불러오지 못했습니다.</p>
                     <?php endif; ?>
                 </div>
                 <div class="field">

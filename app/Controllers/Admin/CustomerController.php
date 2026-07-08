@@ -84,22 +84,18 @@ final class CustomerController extends BaseAdminController
         $clients  = $isAgency ? $service->childClients($id) : [];
 
         // 연동 사용자(user_id) → AITessera 계정 정보 병기(베스트에포트).
-        // 토큰이 없으면(예: 데모 로그인) 조회 자체를 시도하지 않으므로 실패 문구도 띄우지 않는다.
+        // 토큰이 없으면(예: 데모 로그인) 조회 자체를 시도하지 않아 null → 화면은 user_id 숫자만 노출.
         $userId        = isset($customer['user_id']) ? (int) $customer['user_id'] : null;
-        $token         = $this->operatorToken();
-        $linkedAccount = $service->linkedAccount($userId, $token);
-        // 조회를 실제로 시도(토큰 + user_id 존재)했는데 결과가 없을 때만 실패로 간주.
-        $linkedLookupFailed = $userId !== null && $userId > 0 && $token !== null && $linkedAccount === null;
+        $linkedAccount = $service->linkedAccount($userId, $this->operatorToken());
 
         return $this->render('admin/members/form', [
-            'title'              => '회원 수정',
-            'activeMenu'         => 'members',
-            'customer'           => $customer,
-            'types'              => CustomerType::cases(),
-            'agencies'           => model(CustomerModel::class)->activeAgencies(),
-            'clients'            => $clients,
-            'linkedAccount'      => $linkedAccount,
-            'linkedLookupFailed' => $linkedLookupFailed,
+            'title'         => '회원 수정',
+            'activeMenu'    => 'members',
+            'customer'      => $customer,
+            'types'         => CustomerType::cases(),
+            'agencies'      => model(CustomerModel::class)->activeAgencies(),
+            'clients'       => $clients,
+            'linkedAccount' => $linkedAccount,
         ]);
     }
 
