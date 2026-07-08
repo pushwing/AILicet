@@ -22,6 +22,7 @@ final readonly class ProductRequest
         public string $productCode,
         public string $name,
         public string $licenseType,
+        public ?string $description,
         public ?string $productFamily,
         public ?string $version,
         public ?string $periodCode,
@@ -51,6 +52,7 @@ final readonly class ProductRequest
             productCode: trim((string) $request->getPost('product_code')),
             name: trim((string) $request->getPost('name')),
             licenseType: (string) $request->getPost('license_type'),
+            description: self::nullable($request->getPost('description')),
             productFamily: self::nullable($request->getPost('product_family')),
             version: $versions[0] ?? null,
             periodCode: self::nullable($request->getPost('period_code')),
@@ -83,13 +85,16 @@ final readonly class ProductRequest
     /**
      * 상품 테이블 저장용 배열(모듈 제외).
      *
-     * @return array{product_code:string, name:string, product_family:?string, license_type:string, version:?string, period_code:?string, is_active:int}
+     * description 은 원본 그대로 담기며, XSS 정화는 ProductService 저장 단계에서 수행한다.
+     *
+     * @return array{product_code:string, name:string, description:?string, product_family:?string, license_type:string, version:?string, period_code:?string, is_active:int}
      */
     public function toProductRow(): array
     {
         return [
             'product_code'   => $this->productCode,
             'name'           => $this->name,
+            'description'    => $this->description,
             'product_family' => $this->productFamily,
             'license_type'   => $this->licenseType,
             'version'        => $this->version,

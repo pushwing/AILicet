@@ -16,8 +16,30 @@ $versionsText = old('versions');
 if ($versionsText === null) {
     $versionsText = implode("\n", array_map(static fn (array $v): string => $v['version'], $versions));
 }
+
+// 상품 설명 초기값(리치 HTML). old() 우선(검증 실패 재입력 보존).
+$descriptionHtml = old('description');
+if ($descriptionHtml === null) {
+    $descriptionHtml = (string) ($product['description'] ?? '');
+}
 ?>
 <?= $this->extend('layouts/app') ?>
+
+<?= $this->section('head') ?>
+<style>
+    /* 상품 설명 리치 에디터 */
+    .rte-toolbar { display:flex; flex-wrap:wrap; gap:4px; padding:6px; border:1px solid var(--color-border); border-bottom:none; border-radius:var(--radius-sm) var(--radius-sm) 0 0; background:var(--color-surface-2, #f8f9fa); }
+    .rte-toolbar button { min-width:32px; height:30px; padding:0 8px; border:1px solid transparent; border-radius:var(--radius-sm); background:transparent; cursor:pointer; font-size:13px; line-height:1; color:var(--color-text, #222); }
+    .rte-toolbar button:hover { background:rgba(0,0,0,.06); }
+    .rte-toolbar button.is-active { background:var(--color-primary, #0F6E56); color:#fff; }
+    .rte-editor { min-height:180px; max-height:480px; overflow-y:auto; padding:12px 14px; border:1px solid var(--color-border); border-radius:0 0 var(--radius-sm) var(--radius-sm); outline:none; background:#fff; }
+    .rte-editor:focus-within { border-color:var(--color-primary, #0F6E56); }
+    .rte-editor p { margin:0 0 8px; }
+    .rte-editor h1, .rte-editor h2, .rte-editor h3 { margin:12px 0 8px; }
+    .rte-editor ul, .rte-editor ol { margin:0 0 8px; padding-left:22px; }
+    .rte-editor:empty::before, .rte-editor .is-editor-empty:first-child::before { content:attr(data-placeholder); color:var(--color-text-muted, #9aa0a6); pointer-events:none; float:left; height:0; }
+</style>
+<?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
 <div class="page-head">
@@ -84,6 +106,31 @@ if ($versionsText === null) {
     </div>
 
     <div class="card" style="margin-bottom:20px;">
+        <div class="card__head">상품 설명</div>
+        <div class="card__body">
+            <p class="muted" style="margin-top:0;margin-bottom:12px;font-size:12px;">
+                상품 소개·특징 등을 서식과 함께 입력합니다. 저장 시 허용된 태그만 남기고 정화됩니다.
+            </p>
+            <div class="field" style="margin-bottom:0;">
+                <div class="rte-toolbar" id="descToolbar">
+                    <button type="button" data-cmd="bold" title="굵게"><strong>B</strong></button>
+                    <button type="button" data-cmd="italic" title="기울임"><em>I</em></button>
+                    <button type="button" data-cmd="strike" title="취소선"><s>S</s></button>
+                    <button type="button" data-cmd="h2" title="제목">H2</button>
+                    <button type="button" data-cmd="h3" title="소제목">H3</button>
+                    <button type="button" data-cmd="bulletList" title="글머리표">•&nbsp;목록</button>
+                    <button type="button" data-cmd="orderedList" title="번호목록">1.&nbsp;목록</button>
+                    <button type="button" data-cmd="blockquote" title="인용">&ldquo;&rdquo;</button>
+                    <button type="button" data-cmd="undo" title="실행취소">↶</button>
+                    <button type="button" data-cmd="redo" title="다시실행">↷</button>
+                </div>
+                <div class="rte-editor" id="descEditor" data-placeholder="상품 설명을 입력하세요…"></div>
+                <input type="hidden" name="description" id="descriptionInput" value="<?= esc($descriptionHtml) ?>">
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
         <div class="card__head">버전</div>
         <div class="card__body">
             <p class="muted" style="margin-top:0;margin-bottom:12px;font-size:12px;">
@@ -140,4 +187,61 @@ if ($versionsText === null) {
         <a href="/admin/products" class="btn btn--ghost">취소</a>
     </div>
 </form>
+<?= $this->endSection() ?>
+
+<?= $this->section('scripts') ?>
+<script type="module">
+    import { Editor } from 'https://esm.sh/@tiptap/core@2'
+    import StarterKit from 'https://esm.sh/@tiptap/starter-kit@2'
+
+    // 초기 HTML 은 서버에서 안전하게 직렬화(json_encode)해 전달한다.
+    const INITIAL_HTML = <?= json_encode($descriptionHtml, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const hidden = document.getElementById('descriptionInput');
+
+    const editor = new Editor({
+        element: document.getElementById('descEditor'),
+        extensions: [StarterKit],
+        content: INITIAL_HTML,
+        onUpdate: ({ editor }) => {
+            // 빈 에디터는 빈 문자열로 저장(<p></p> 노이즈 방지).
+            hidden.value = editor.isEmpty ? '' : editor.getHTML()
+        },
+    })
+
+    // 툴바 커맨드 매핑
+    const COMMANDS = {
+        bold:        e => e.toggleBold(),
+        italic:      e => e.toggleItalic(),
+        strike:      e => e.toggleStrike(),
+        h2:          e => e.toggleHeading({ level: 2 }),
+        h3:          e => e.toggleHeading({ level: 3 }),
+        bulletList:  e => e.toggleBulletList(),
+        orderedList: e => e.toggleOrderedList(),
+        blockquote:  e => e.toggleBlockquote(),
+        undo:        e => e.undo(),
+        redo:        e => e.redo(),
+    }
+
+    document.getElementById('descToolbar').addEventListener('click', (ev) => {
+        const btn = ev.target.closest('button[data-cmd]')
+        if (!btn) return
+        const run = COMMANDS[btn.dataset.cmd]
+        if (run) run(editor.chain().focus()).run()
+    })
+
+    // 활성 서식 버튼 하이라이트
+    const ACTIVE_CHECK = {
+        bold: 'bold', italic: 'italic', strike: 'strike',
+        bulletList: 'bulletList', orderedList: 'orderedList', blockquote: 'blockquote',
+    }
+    editor.on('transaction', () => {
+        document.querySelectorAll('#descToolbar button[data-cmd]').forEach(btn => {
+            const name = ACTIVE_CHECK[btn.dataset.cmd]
+            if (name === undefined) return
+            btn.classList.toggle('is-active', editor.isActive(name))
+        })
+        document.querySelector('[data-cmd="h2"]')?.classList.toggle('is-active', editor.isActive('heading', { level: 2 }))
+        document.querySelector('[data-cmd="h3"]')?.classList.toggle('is-active', editor.isActive('heading', { level: 3 }))
+    })
+</script>
 <?= $this->endSection() ?>

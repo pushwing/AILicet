@@ -3,6 +3,7 @@
 namespace Config;
 
 use App\Integrations\AitesseraClient;
+use App\Libraries\HtmlSanitizer;
 use App\Libraries\JwtLibrary;
 use App\Libraries\JwtVerifier;
 use App\Libraries\LicenseSigner;
@@ -95,6 +96,20 @@ class Services extends BaseService
         }
 
         return new ProductService();
+    }
+
+    /**
+     * 리치 텍스트 HTML 화이트리스트 정화기.
+     *
+     * 테스트에서 injectMock('htmlSanitizer', ...) 으로 대체 가능.
+     */
+    public static function htmlSanitizer(bool $getShared = true): HtmlSanitizer
+    {
+        if ($getShared) {
+            return static::getSharedInstance('htmlSanitizer');
+        }
+
+        return new HtmlSanitizer();
     }
 
     /**
