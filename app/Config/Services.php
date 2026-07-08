@@ -27,6 +27,7 @@ use App\Services\LicenseLifecycleService;
 use App\Services\AuditLogQueryService;
 use App\Services\LicenseQueryService;
 use App\Services\NodeLockLicenseService;
+use App\Services\ModuleService;
 use App\Services\ProductService;
 use CodeIgniter\Config\BaseService;
 
@@ -91,6 +92,18 @@ class Services extends BaseService
         }
 
         return new ProductService();
+    }
+
+    /**
+     * 모듈 마스터 서비스.
+     */
+    public static function moduleService(bool $getShared = true): ModuleService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('moduleService');
+        }
+
+        return new ModuleService();
     }
 
     /**

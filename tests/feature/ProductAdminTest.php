@@ -48,6 +48,11 @@ final class ProductAdminTest extends CIUnitTestCase
 
     public function testCreateProductPersistsAndRedirects(): void
     {
+        // 모듈 마스터 선등록 후, 상품 폼에서 선택한다.
+        $mid = (int) model(\App\Models\ModuleModel::class)->insert([
+            'code' => 'MD001', 'name' => '정량분석', 'is_active' => 1,
+        ], true);
+
         $result = $this->withSession($this->operatorSession())->post('admin/products', [
             'product_code' => 'PT900',
             'name'         => 'AQUA',
@@ -55,13 +60,12 @@ final class ProductAdminTest extends CIUnitTestCase
             'period_code'  => 'perpetual_credit',
             'version'      => '2.1.3',
             'is_active'    => '1',
-            'module_code'  => ['MD001', 'MD002'],
-            'module_name'  => ['정량분석', '리포트'],
+            'module_ids'   => [(string) $mid],
         ]);
 
         $result->assertRedirect();
         $this->seeInDatabase('products', ['product_code' => 'PT900', 'license_type' => 'floating']);
-        $this->seeInDatabase('product_modules', ['code' => 'MD001', 'name' => '정량분석']);
+        $this->seeInDatabase('product_modules', ['module_id' => $mid, 'code' => 'MD001', 'name' => '정량분석']);
     }
 
     public function testEditShowsExistingProduct(): void

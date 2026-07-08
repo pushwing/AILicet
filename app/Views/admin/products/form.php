@@ -2,6 +2,7 @@
 /**
  * @var array<string, mixed>|null $product
  * @var list<array{id:int, product_id:int, code:string, name:string}> $modules
+ * @var list<array{id:int, code:string, name:string}> $masterModules
  * @var list<\App\Enums\LicenseType> $licenseTypes
  * @var list<\App\Enums\PeriodCode> $periodCodes
  */
@@ -81,13 +82,39 @@ $val    = static fn (string $k, string $default = ''): string => esc((string) ($
     </div>
 
     <div class="card" style="margin-bottom:20px;">
-        <div class="card__head">
-            모듈
-            <button type="button" class="btn btn--ghost" onclick="addModule()">+ 모듈 추가</button>
-        </div>
+        <div class="card__head">모듈</div>
         <div class="card__body">
-            <div id="moduleRows" style="display:flex;flex-direction:column;gap:10px;"></div>
-            <p class="muted mb-0" style="margin-top:8px;font-size:12px;">모듈 코드와 이름을 입력합니다. (예: MD001 / 정량분석)</p>
+            <?php if ($isEdit): ?>
+                <?php /* 모듈 구성은 생성 시 확정 — 수정 불가(이미 판매된 상품 보호). 모듈 변경은 신규 상품으로. */ ?>
+                <div class="alert alert--info" style="margin-bottom:12px;">
+                    모듈 구성은 상품 생성 시 확정되며 수정할 수 없습니다. 모듈을 바꾸려면 상품을 새로 등록하세요.
+                </div>
+                <?php if ($modules === []): ?>
+                    <p class="muted mb-0">연결된 모듈이 없습니다.</p>
+                <?php else: ?>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                        <?php foreach ($modules as $m): ?>
+                            <span class="badge badge--muted"><?= esc($m['code']) ?> · <?= esc($m['name']) ?></span>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            <?php elseif ($masterModules === []): ?>
+                <p class="muted mb-0">
+                    등록된 모듈이 없습니다.
+                    <a href="/admin/products?tab=modules">모듈 관리</a> 탭에서 모듈을 먼저 등록하세요.
+                </p>
+            <?php else: ?>
+                <p class="muted" style="margin-top:0;margin-bottom:12px;font-size:12px;">상품에 포함할 모듈을 선택합니다. 저장 후에는 변경할 수 없습니다.</p>
+                <div style="display:flex;flex-wrap:wrap;gap:8px 20px;">
+                    <?php foreach ($masterModules as $m): ?>
+                        <label style="display:inline-flex;gap:6px;align-items:center;">
+                            <input type="checkbox" name="module_ids[]" value="<?= esc((string) $m['id']) ?>"
+                                <?= in_array($m['id'], old('module_ids', []) ?: [], false) ? 'checked' : '' ?>>
+                            <?= esc($m['code']) ?> · <?= esc($m['name']) ?>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -96,25 +123,4 @@ $val    = static fn (string $k, string $default = ''): string => esc((string) ($
         <a href="/admin/products" class="btn btn--ghost">취소</a>
     </div>
 </form>
-<?= $this->endSection() ?>
-
-<?= $this->section('scripts') ?>
-<script>
-    const EXISTING_MODULES = <?= json_encode(array_map(static fn ($m) => ['code' => $m['code'], 'name' => $m['name']], $modules)) ?>;
-
-    function moduleRow(code = '', name = '') {
-        const row = document.createElement('div');
-        row.style.cssText = 'display:grid;grid-template-columns:180px 1fr auto;gap:10px;';
-        row.innerHTML = `
-            <input class="input" name="module_code[]" placeholder="코드 (MD001)" value="${code.replace(/"/g, '&quot;')}">
-            <input class="input" name="module_name[]" placeholder="모듈명" value="${name.replace(/"/g, '&quot;')}">
-            <button type="button" class="btn btn--ghost" onclick="this.parentNode.remove()">삭제</button>`;
-        return row;
-    }
-    function addModule(code, name) {
-        document.getElementById('moduleRows').appendChild(moduleRow(code, name));
-    }
-    (EXISTING_MODULES.length ? EXISTING_MODULES : [{ code: '', name: '' }])
-        .forEach(m => addModule(m.code, m.name));
-</script>
 <?= $this->endSection() ?>

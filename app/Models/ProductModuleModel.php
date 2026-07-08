@@ -15,16 +15,17 @@ final class ProductModuleModel extends Model
     protected $primaryKey    = 'id';
     protected $returnType    = 'array';
     protected $useTimestamps = true;
-    protected $allowedFields = ['product_id', 'code', 'name'];
+    protected $allowedFields = ['product_id', 'module_id', 'code', 'name'];
 
     protected $validationRules = [
         'product_id' => 'required|is_natural_no_zero',
+        'module_id'  => 'required|is_natural_no_zero',
         'code'       => 'required|max_length[30]',
         'name'       => 'required|max_length[100]',
     ];
 
     /**
-     * 상품별 모듈 목록.
+     * 상품별 모듈 목록(code/name 스냅샷).
      *
      * @return list<array{id:int, product_id:int, code:string, name:string}>
      */
@@ -37,11 +38,5 @@ final class ProductModuleModel extends Model
             ->findAll();
 
         return $rows;
-    }
-
-    /** 상품의 모든 모듈 삭제(재동기화용). */
-    public function deleteByProduct(int $productId): void
-    {
-        $this->where('product_id', $productId)->delete();
     }
 }

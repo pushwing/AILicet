@@ -39,6 +39,7 @@ CI4 뷰 레이아웃 상속을 사용한다.
 | `.badge` `.badge--success\|warning\|danger\|muted` | 상태 배지 |
 | `.field` / `.field__label` / `.input` | 폼 |
 | `.alert` `.alert--danger\|info` | 알림 |
+| `.tabs` / `.tab-btn` `.tab-btn.is-active` | 탭 내비게이션 (패널은 `.tab-panel`, JS로 전환) |
 
 ## 데이터 그리드 · 차트
 

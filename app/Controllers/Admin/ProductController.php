@@ -18,26 +18,28 @@ use RuntimeException;
  */
 final class ProductController extends BaseAdminController
 {
-    /** GET /admin/products — 목록. */
+    /** GET /admin/products — 목록(상품·모듈 2탭). */
     public function index(): string
     {
         return $this->render('admin/products/index', [
             'title'      => '상품·모듈 관리',
             'activeMenu' => 'products',
             'products'   => service('productService')->list(),
+            'modules'    => service('moduleService')->list(),
         ]);
     }
 
-    /** GET /admin/products/new — 등록 폼. */
+    /** GET /admin/products/new — 등록 폼(모듈 마스터에서 선택). */
     public function new(): string
     {
         return $this->render('admin/products/form', [
-            'title'        => '상품 등록',
-            'activeMenu'   => 'products',
-            'product'      => null,
-            'modules'      => [],
-            'licenseTypes' => LicenseType::cases(),
-            'periodCodes'  => PeriodCode::cases(),
+            'title'         => '상품 등록',
+            'activeMenu'    => 'products',
+            'product'       => null,
+            'modules'       => [],
+            'masterModules' => service('moduleService')->activeForSelect(),
+            'licenseTypes'  => LicenseType::cases(),
+            'periodCodes'   => PeriodCode::cases(),
         ]);
     }
 
@@ -62,12 +64,13 @@ final class ProductController extends BaseAdminController
         }
 
         return $this->render('admin/products/form', [
-            'title'        => '상품 수정',
-            'activeMenu'   => 'products',
-            'product'      => $found['product'],
-            'modules'      => $found['modules'],
-            'licenseTypes' => LicenseType::cases(),
-            'periodCodes'  => PeriodCode::cases(),
+            'title'         => '상품 수정',
+            'activeMenu'    => 'products',
+            'product'       => $found['product'],
+            'modules'       => $found['modules'],
+            'masterModules' => [],
+            'licenseTypes'  => LicenseType::cases(),
+            'periodCodes'   => PeriodCode::cases(),
         ]);
     }
 
