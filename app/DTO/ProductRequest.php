@@ -9,12 +9,12 @@ use CodeIgniter\HTTP\IncomingRequest;
 /**
  * 상품 생성·수정 요청 DTO.
  *
- * modules 는 [{code, name}, ...] 형태의 모듈 목록.
+ * moduleIds 는 모듈 마스터에서 선택한 모듈 ID 목록. (수동 입력이 아니라 선택)
  */
 final readonly class ProductRequest
 {
     /**
-     * @param list<array{code:string, name:string}> $modules
+     * @param list<int> $moduleIds
      */
     public function __construct(
         public string $productCode,
@@ -24,25 +24,23 @@ final readonly class ProductRequest
         public ?string $version,
         public ?string $periodCode,
         public bool $isActive,
-        public array $modules,
+        public array $moduleIds,
     ) {
     }
 
     public static function fromRequest(IncomingRequest $request): self
     {
-        /** @var array<string, mixed> $codes */
-        $codes = (array) $request->getPost('module_code');
-        /** @var array<string, mixed> $names */
-        $names = (array) $request->getPost('module_name');
+        /** @var array<int|string, mixed> $rawIds */
+        $rawIds = (array) $request->getPost('module_ids');
 
-        $modules = [];
-        foreach ($codes as $i => $code) {
-            $code = trim((string) $code);
-            $name = trim((string) ($names[$i] ?? ''));
-            if ($code !== '' && $name !== '') {
-                $modules[] = ['code' => $code, 'name' => $name];
+        $moduleIds = [];
+        foreach ($rawIds as $rawId) {
+            $moduleId = (int) $rawId;
+            if ($moduleId > 0) {
+                $moduleIds[] = $moduleId;
             }
         }
+        $moduleIds = array_values(array_unique($moduleIds));
 
         return new self(
             productCode: trim((string) $request->getPost('product_code')),
@@ -52,7 +50,7 @@ final readonly class ProductRequest
             version: self::nullable($request->getPost('version')),
             periodCode: self::nullable($request->getPost('period_code')),
             isActive: (string) $request->getPost('is_active') === '1',
-            modules: $modules,
+            moduleIds: $moduleIds,
         );
     }
 

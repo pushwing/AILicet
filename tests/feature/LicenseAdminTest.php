@@ -77,7 +77,12 @@ final class LicenseAdminTest extends CIUnitTestCase
         $id = (int) model(ProductModel::class)->insert([
             'product_code' => 'PT001', 'name' => 'tES LAB', 'license_type' => $type, 'version' => '3.0', 'is_active' => 1,
         ], true);
-        model(ProductModuleModel::class)->insert(['product_id' => $id, 'code' => 'MD001', 'name' => '정량분석']);
+        $moduleId = (int) model(\App\Models\ModuleModel::class)->insert([
+            'code' => 'MD001', 'name' => '정량분석', 'is_active' => 1,
+        ], true);
+        model(ProductModuleModel::class)->insert([
+            'product_id' => $id, 'module_id' => $moduleId, 'code' => 'MD001', 'name' => '정량분석',
+        ]);
 
         return $id;
     }

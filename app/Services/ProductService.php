@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\DTO\ProductRequest;
+use App\Models\LicenseModel;
+use App\Models\ModuleModel;
 use App\Models\ProductModel;
 use App\Models\ProductModuleModel;
 use RuntimeException;
@@ -25,11 +27,13 @@ final class ProductService
 
     private ProductModel $products;
     private ProductModuleModel $modules;
+    private ModuleModel $moduleMaster;
 
     public function __construct()
     {
-        $this->products = model(ProductModel::class);
-        $this->modules  = model(ProductModuleModel::class);
+        $this->products     = model(ProductModel::class);
+        $this->modules      = model(ProductModuleModel::class);
+        $this->moduleMaster = model(ModuleModel::class);
     }
 
     /**
@@ -98,7 +102,7 @@ final class ProductService
         if ($productId === 0) {
             throw new RuntimeException($this->firstError($this->products->errors()));
         }
-        $this->syncModules($productId, $dto->modules);
+        $this->syncModules($productId, $dto->moduleIds);
 
         $db->transComplete();
         if ($db->transStatus() === false) {
@@ -111,49 +115,64 @@ final class ProductService
     }
 
     /**
-     * 상품 수정(+모듈 재동기화).
+     * 상품 기본정보 수정.
+     *
+     * 모듈 구성은 생성 시 확정되며 이후 변경할 수 없다(이미 판매된 상품 보호). 여기서는 건드리지 않는다.
      *
      * @throws RuntimeException 유효성·저장 실패
      */
     public function update(int $id, ProductRequest $dto): void
     {
-        $db = db_connect();
-        $db->transStart();
-
         // is_unique[...,{id}] 플레이스홀더 치환용으로 id 포함(allowedFields 밖이라 실제 SET 에는 미반영)
         $row       = $dto->toProductRow();
         $row['id'] = $id;
         if ($this->products->update($id, $row) === false) {
             throw new RuntimeException($this->firstError($this->products->errors()));
         }
-        $this->modules->deleteByProduct($id);
-        $this->syncModules($id, $dto->modules);
-
-        $db->transComplete();
-        if ($db->transStatus() === false) {
-            throw new RuntimeException('상품 수정에 실패했습니다.');
-        }
 
         $this->invalidateCache();
     }
 
-    /** 상품 소프트 삭제. */
+    /**
+     * 상품 소프트 삭제. 발급 이력이 있으면 거부한다.
+     *
+     * @throws RuntimeException 발급 이력이 있을 때
+     */
     public function delete(int $id): void
     {
+        $issued = model(LicenseModel::class)->withDeleted()->where('product_id', $id)->countAllResults() > 0;
+        if ($issued) {
+            throw new RuntimeException('이미 발급 이력이 있는 상품은 삭제할 수 없습니다.');
+        }
+
         $this->products->delete($id);
         $this->invalidateCache();
     }
 
     /**
-     * @param list<array{code:string, name:string}> $modules
+     * 선택한 모듈 마스터를 상품에 연결(code/name 스냅샷).
+     *
+     * @param list<int> $moduleIds
      */
-    private function syncModules(int $productId, array $modules): void
+    private function syncModules(int $productId, array $moduleIds): void
     {
-        foreach ($modules as $module) {
+        if ($moduleIds === []) {
+            return;
+        }
+
+        /** @var list<array{id:int, code:string, name:string}> $masters */
+        $masters = $this->moduleMaster
+            ->select('id, code, name')
+            ->whereIn('id', $moduleIds)
+            ->where('is_active', 1)
+            ->findAll();
+
+        foreach ($masters as $master) {
             $this->modules->insert([
                 'product_id' => $productId,
-                'code'       => $module['code'],
-                'name'       => $module['name'],
+                'module_id'  => (int) $master['id'],
+                'code'       => $master['code'],
+                'name'       => $master['name'],
             ]);
         }
     }
