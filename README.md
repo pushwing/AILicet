@@ -64,6 +64,7 @@ AILicet 은 성형·토탈 광고 솔루션(AIvance 제품군)을 위한 **라�
 - **#7 노드락 생성 엔진** — Ed25519 서명(개인키 KMS/env), Strategy 패턴, 저장소 추상화(로컬/S3), 발급 이력
 - **#8 플로팅 발급** — 키-온리, activate/check term, 활성화 캐시 토큰, 세그플러스(크레딧/카운트)
 - **#9 상태 관리** — 정지/종료/보관/연장/재발급, 이전 키 폐기, 트랜잭션·이력
+- **#74 노드락 호스트ID 유틸리티** — 고객 PC(윈도우/맥)의 머신 고유 UUID(`IOPlatformUUID`/`MachineGuid`)를 SHA-256 해시해 고정 포맷(`XXXX-XXXX-XXXX-XXXX`)의 호스트ID 를 산출·클립보드 복사하는 Go CLI(`tools/hostid`). 발급·재발급 입력 경계에서 형식 검증(`NodeLockIssueRequest::normalizeHostId()`). 산출 규칙은 라이센스 런타임 검증(`system_id_check`)과 맞물려 **불변**
 
 ### P3 · Admin (운영자)
 - **#10 회원관리** — 대행사/고객 CRUD, 검색·페이징(meta 표준)
@@ -153,11 +154,30 @@ php spark db:seed DemoSeeder     # 대행사(user_id=2)·고객(user_id=3) + 샘
    > 무중단 전환 절차: AILicet 을 `HS256,RS256` 병행으로 배포 → AITessera `JWT_ALGO=RS256` 전환 → 기존 HS256 토큰 만료 → AILicet `JWT_VERIFY_ALGOS=RS256` 으로 축소.
 3. AITessera 운영자 계정으로 로그인하면 토큰이 세션에 저장되고 회원 계정 관리가 동작한다.
 
+### 호스트ID 유틸리티 (tools/hostid)
+
+노드락 라이센스 발급용 호스트ID 산출 프로그램(윈도우/맥 범용). 고객이 실행하면 머신
+고유값으로부터 고정 포맷 호스트ID 를 만들어 화면에 표시하고 클립보드에 복사한다.
+Go 1.22+ 필요하며 순수 stdlib 라 외부 의존성·인터넷 없이 빌드된다.
+
+```bash
+cd tools/hostid
+make            # dist/ 에 mac(universal) + windows(amd64) 실행파일 생성
+make test       # 산출 규칙 회귀 테스트
+make sign       # 배포용 코드사이닝(자격증명 env 주입 — sign.sh 헤더 참고)
+```
+
+- 산출 규칙: `SHA-256("AILICET-NODELOCK-v1:" + 정규화된 UUID)` → 앞 8바이트 → `XXXX-XXXX-XXXX-XXXX`
+- **불변 규칙** — 재부팅·OS업데이트·재실행에 동일값. 라이센스 런타임 검증기는 반드시 동일
+  규칙으로 재현해야 한다(불일치 시 전체 `HOST_MISMATCH`). 상세: `tools/hostid/README.md`
+- 미서명 배포 시 Gatekeeper·SmartScreen 이 차단하므로 배포 전 `make sign` 권장
+
 ## 검증
 
 ```bash
 composer check                   # 콘솔: PHPStan level 6 + PHPUnit
 cd frontapi && composer check    # frontApi: PHPStan + PHPUnit
+cd tools/hostid && make test     # 호스트ID 유틸리티: Go 단위 테스트
 ```
 
 `dev`·`main` push/PR 마다 GitHub Actions 가 backend·frontapi 잡을 병렬 검증한다.
