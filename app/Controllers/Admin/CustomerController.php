@@ -73,17 +73,29 @@ final class CustomerController extends BaseAdminController
     /** GET /admin/members/{id}/edit — 수정 폼. */
     public function edit(int $id): string|RedirectResponse
     {
-        $customer = service('customerService')->find($id);
+        $service  = service('customerService');
+        $customer = $service->find($id);
         if ($customer === null) {
             return redirect()->to('/admin/members')->with('error', '회원을 찾을 수 없습니다.');
         }
 
+        // 대행사 상세: 하위 고객 목록을 함께 노출한다. 고객이면 빈 배열.
+        $isAgency = ($customer['customer_type'] ?? '') === CustomerType::Agency->value;
+        $clients  = $isAgency ? $service->childClients($id) : [];
+
+        // 연동 사용자(user_id) → AITessera 계정 정보 병기(베스트에포트).
+        // 토큰이 없으면(예: 데모 로그인) 조회 자체를 시도하지 않아 null → 화면은 user_id 숫자만 노출.
+        $userId        = isset($customer['user_id']) ? (int) $customer['user_id'] : null;
+        $linkedAccount = $service->linkedAccount($userId, $this->operatorToken());
+
         return $this->render('admin/members/form', [
-            'title'      => '회원 수정',
-            'activeMenu' => 'members',
-            'customer'   => $customer,
-            'types'      => CustomerType::cases(),
-            'agencies'   => model(CustomerModel::class)->activeAgencies(),
+            'title'         => '회원 수정',
+            'activeMenu'    => 'members',
+            'customer'      => $customer,
+            'types'         => CustomerType::cases(),
+            'agencies'      => model(CustomerModel::class)->activeAgencies(),
+            'clients'       => $clients,
+            'linkedAccount' => $linkedAccount,
         ]);
     }
 

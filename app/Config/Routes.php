@@ -57,7 +57,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('/', 'Admin\DashboardController::index');
     });
 
-    // 회원 계정(AITessera) — 운영자 전용
+    // 운영자 관리(AITessera) — 운영자 전용
     $routes->group('accounts', ['filter' => 'adminAuth:operator'], static function (RouteCollection $routes): void {
         $routes->get('/', 'Admin\AccountController::index');
         $routes->get('data', 'Admin\AccountController::data');
@@ -102,5 +102,12 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('(:num)/edit', 'Admin\ProductController::edit/$1');
         $routes->post('(:num)', 'Admin\ProductController::update/$1');
         $routes->post('(:num)/delete', 'Admin\ProductController::delete/$1');
+    });
+
+    // 감사로그 — 운영자 전용 (읽기 전용)
+    $routes->group('audit-logs', ['filter' => 'adminAuth:operator'], static function (RouteCollection $routes): void {
+        $routes->get('/', 'Admin\AuditLogController::index');
+        $routes->get('data', 'Admin\AuditLogController::data');
+        $routes->get('(:num)', 'Admin\AuditLogController::show/$1');
     });
 });

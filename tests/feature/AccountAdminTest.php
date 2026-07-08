@@ -82,7 +82,7 @@ final class AccountAdminTest extends CIUnitTestCase
     {
         $result = $this->withSession($this->operator())->get('admin/accounts');
         $result->assertStatus(200);
-        $result->assertSee('회원 계정');
+        $result->assertSee('운영자 관리');
         $result->assertSeeElement('#grid');
     }
 
@@ -110,14 +110,15 @@ final class AccountAdminTest extends CIUnitTestCase
 
     public function testCreateCallsClient(): void
     {
+        // 운영자 관리 화면 — 요청의 role 값과 무관하게 운영자(role=1)로 고정 생성한다.
         $result = $this->withSession($this->operator())->post('admin/accounts', [
-            'email' => 'new@n.com', 'password' => 'secret12', 'role' => '2', 'name' => '김대행', 'contact' => '010',
+            'email' => 'new@n.com', 'password' => 'secret12', 'role' => '2', 'name' => '김운영', 'contact' => '010',
         ]);
 
         $result->assertRedirect();
         $this->assertCount(1, $this->client->created);
         $this->assertSame('new@n.com', $this->client->created[0]['email']);
-        $this->assertSame(2, $this->client->created[0]['role']);
+        $this->assertSame(UserRole::Operator->value, $this->client->created[0]['role']);
         $this->assertSame('ailicet', $this->client->created[0]['affiliation']);
     }
 

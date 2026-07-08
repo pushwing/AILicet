@@ -20,7 +20,7 @@ $title      = $title ?? 'AILicet';
 $menus = match ($role) {
     UserRole::Operator => [
         ['key' => 'dashboard', 'label' => '대시보드', 'icon' => '▦', 'url' => '/admin'],
-        ['key' => 'accounts',  'label' => '회원 계정', 'icon' => '🪪', 'url' => '/admin/accounts'],
+        ['key' => 'accounts',  'label' => '운영자 관리', 'icon' => '🪪', 'url' => '/admin/accounts'],
         ['key' => 'members',   'label' => '회원관리', 'icon' => '👤', 'url' => '/admin/members'],
         ['key' => 'licenses',  'label' => '라이센스', 'icon' => '🔑', 'url' => '/admin/licenses'],
         ['key' => 'products',  'label' => '상품·모듈', 'icon' => '📦', 'url' => '/admin/products'],

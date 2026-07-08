@@ -59,4 +59,21 @@ final class CustomerModel extends Model
 
         return $rows;
     }
+
+    /**
+     * 특정 대행사에 소속된 하위 고객 목록(대행사 상세용).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function clientsOf(int $agencyId): array
+    {
+        /** @var list<array<string, mixed>> $rows */
+        $rows = $this->select('id, company_name, name, email, phone, user_id, is_active, created_at')
+            ->where('parent_id', $agencyId)
+            ->where('customer_type', CustomerType::Client->value)
+            ->orderBy('company_name', 'ASC')
+            ->findAll();
+
+        return $rows;
+    }
 }
