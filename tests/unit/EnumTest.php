@@ -50,6 +50,35 @@ final class EnumTest extends CIUnitTestCase
         $this->assertFalse(PeriodCode::Period->hasUsageLimit());
     }
 
+    /**
+     * 이슈 #48: 기간정책별 필드 요구 매트릭스.
+     *
+     * @return list<array{PeriodCode, array{expire:bool, count:bool, credit:bool}}>
+     */
+    public static function fieldRulesProvider(): array
+    {
+        return [
+            [PeriodCode::Perpetual,       ['expire' => false, 'count' => false, 'credit' => false]],
+            [PeriodCode::Period,          ['expire' => true,  'count' => false, 'credit' => false]],
+            [PeriodCode::PeriodCount,     ['expire' => true,  'count' => true,  'credit' => false]],
+            [PeriodCode::PerpetualCount,  ['expire' => false, 'count' => true,  'credit' => false]],
+            [PeriodCode::PerpetualCredit, ['expire' => false, 'count' => false, 'credit' => true]],
+        ];
+    }
+
+    /**
+     * @param array{expire:bool, count:bool, credit:bool} $expected
+     *
+     * @dataProvider fieldRulesProvider
+     */
+    public function testPeriodCodeFieldRules(PeriodCode $code, array $expected): void
+    {
+        $this->assertSame($expected, $code->fieldRules());
+        $this->assertSame($expected['expire'], $code->requiresExpireDate());
+        $this->assertSame($expected['count'], $code->requiresCount());
+        $this->assertSame($expected['credit'], $code->requiresCredit());
+    }
+
     public function testAllEnumsExposeLabels(): void
     {
         foreach ([

@@ -41,6 +41,7 @@ $routes->group('agency', ['filter' => 'adminAuth:agency'], static function (Rout
         $routes->get('new', 'Agency\LicenseController::new');
         $routes->post('/', 'Agency\LicenseController::create');
         $routes->get('product-modules/(:num)', 'Agency\LicenseController::productModules/$1');
+        $routes->get('product-versions/(:num)', 'Agency\LicenseController::productVersions/$1');
         $routes->get('(:num)', 'Agency\LicenseController::show/$1');
     });
 });
@@ -85,6 +86,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('new', 'Admin\LicenseController::new');
         $routes->post('/', 'Admin\LicenseController::create');
         $routes->get('product-modules/(:num)', 'Admin\LicenseController::productModules/$1');
+        $routes->get('product-versions/(:num)', 'Admin\LicenseController::productVersions/$1');
         $routes->get('(:num)', 'Admin\LicenseController::show/$1');
         $routes->get('(:num)/download', 'Admin\LicenseController::download/$1');
         $routes->post('(:num)/suspend', 'Admin\LicenseController::suspend/$1');

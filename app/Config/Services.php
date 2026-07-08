@@ -24,6 +24,7 @@ use App\Services\ClientSignupService;
 use App\Services\CustomerService;
 use App\Services\FloatingLicenseService;
 use App\Services\LicenseLifecycleService;
+use App\Services\LicensePolicyValidator;
 use App\Services\AuditLogQueryService;
 use App\Services\LicenseQueryService;
 use App\Services\NodeLockLicenseService;
@@ -158,6 +159,18 @@ class Services extends BaseService
         }
 
         return new FloatingLicenseService();
+    }
+
+    /**
+     * 기간정책별 발급 입력 검증·정규화기(노드락·플로팅 공통).
+     */
+    public static function licensePolicyValidator(bool $getShared = true): LicensePolicyValidator
+    {
+        if ($getShared) {
+            return static::getSharedInstance('licensePolicyValidator');
+        }
+
+        return new LicensePolicyValidator();
     }
 
     /**

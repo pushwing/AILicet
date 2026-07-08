@@ -41,19 +41,21 @@ final class ProductServiceTest extends CIUnitTestCase
     }
 
     /**
-     * @param list<int> $moduleIds
+     * @param list<int>    $moduleIds
+     * @param list<string> $versions
      */
-    private function req(string $code = 'PT001', bool $active = true, array $moduleIds = []): ProductRequest
+    private function req(string $code = 'PT001', bool $active = true, array $moduleIds = [], array $versions = []): ProductRequest
     {
         return new ProductRequest(
             productCode: $code,
             name: 'tES LAB',
             licenseType: 'nodelock',
             productFamily: 'teslab',
-            version: '3.0.1',
+            version: $versions[0] ?? '3.0.1',
             periodCode: 'period',
             isActive: $active,
             moduleIds: $moduleIds,
+            versions: $versions,
         );
     }
 
@@ -118,6 +120,51 @@ final class ProductServiceTest extends CIUnitTestCase
         $this->assertSame('floating', $found['product']['license_type']);
         $this->assertCount(1, $found['modules']);                          // 모듈은 그대로
         $this->assertSame('MD001', $found['modules'][0]['code']);          // 잠금 유지
+    }
+
+    public function testCreateSyncsVersions(): void
+    {
+        // 이슈 #48: 상품 생성 시 버전 목록이 활성으로 저장된다.
+        $id    = $this->service->create($this->req('PT500', true, [], ['2.0.1', '1.0.1']));
+        $found = $this->service->find($id);
+
+        $this->assertNotNull($found);
+        $this->assertCount(2, $found['versions']);
+        // byProduct 는 version DESC 정렬
+        $this->assertSame('2.0.1', $found['versions'][0]['version']);
+        $this->assertSame('1.0.1', $found['versions'][1]['version']);
+        $this->seeInDatabase('product_versions', ['product_id' => $id, 'version' => '1.0.1', 'is_active' => 1]);
+    }
+
+    public function testUpdateAddsNewAndDeactivatesRemovedVersions(): void
+    {
+        $id = $this->service->create($this->req('PT510', true, [], ['1.0.1', '2.0.1']));
+
+        // 2.0.1 제거 + 3.0.0 추가
+        $this->service->update($id, $this->req('PT510', true, [], ['1.0.1', '3.0.0']));
+
+        $found = $this->service->find($id);
+        $this->assertNotNull($found);
+
+        // 활성 버전은 1.0.1, 3.0.0 두 개
+        $activeVersions = array_map(static fn (array $v): string => $v['version'], $found['versions']);
+        sort($activeVersions);
+        $this->assertSame(['1.0.1', '3.0.0'], $activeVersions);
+
+        // 제거된 2.0.1 은 하드 삭제가 아니라 비활성으로 보존
+        $this->seeInDatabase('product_versions', ['product_id' => $id, 'version' => '2.0.1', 'is_active' => 0]);
+    }
+
+    public function testUpdateReactivatesReaddedVersion(): void
+    {
+        $id = $this->service->create($this->req('PT520', true, [], ['1.0.1']));
+        $this->service->update($id, $this->req('PT520', true, [], []));          // 1.0.1 비활성
+        $this->seeInDatabase('product_versions', ['product_id' => $id, 'version' => '1.0.1', 'is_active' => 0]);
+
+        $this->service->update($id, $this->req('PT520', true, [], ['1.0.1']));   // 다시 추가 → 재활성
+        $this->seeInDatabase('product_versions', ['product_id' => $id, 'version' => '1.0.1', 'is_active' => 1]);
+        // 중복 삽입 없이 단일 레코드 유지
+        $this->assertSame(1, model(\App\Models\ProductVersionModel::class)->where('product_id', $id)->countAllResults());
     }
 
     public function testDeleteSoftDeletesProduct(): void
