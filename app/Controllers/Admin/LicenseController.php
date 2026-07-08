@@ -122,7 +122,12 @@ final class LicenseController extends BaseAdminController
                     'check_term'    => (int) ($this->request->getPost('check_term') ?: 30),
                 ])));
             } else {
-                $payload['host_id'] = (string) $this->request->getPost('host_id');
+                $host = NodeLockIssueRequest::normalizeHostId((string) $this->request->getPost('host_id'));
+                if ($host === null) {
+                    return redirect()->back()->withInput()
+                        ->with('error', '호스트ID 형식이 올바르지 않습니다. 예: 9F3A-1C7B-E204-8DD6 (tools/hostid 유틸리티로 산출)');
+                }
+                $payload['host_id'] = $host;
                 $result = service('nodeLockLicenseService')->issue(NodeLockIssueRequest::fromArray($payload));
             }
         } catch (RuntimeException $e) {
@@ -202,10 +207,20 @@ final class LicenseController extends BaseAdminController
     public function reissue(int $id): RedirectResponse
     {
         $actor   = (int) (session()->get('authUser')['id'] ?? 0);
-        $newHost = $this->request->getPost('host_id') ?: null;
+
+        // 새 호스트ID 는 선택. 입력된 경우에만 형식을 검증한다(빈 값 = 기존 유지).
+        $newHostRaw = (string) ($this->request->getPost('host_id') ?? '');
+        $newHost    = null;
+        if (trim($newHostRaw) !== '') {
+            $newHost = NodeLockIssueRequest::normalizeHostId($newHostRaw);
+            if ($newHost === null) {
+                return redirect()->back()
+                    ->with('error', '호스트ID 형식이 올바르지 않습니다. 예: 9F3A-1C7B-E204-8DD6 (tools/hostid 유틸리티로 산출)');
+            }
+        }
 
         try {
-            $newKey = service('licenseLifecycleService')->reissue($id, $actor, $newHost !== null ? (string) $newHost : null);
+            $newKey = service('licenseLifecycleService')->reissue($id, $actor, $newHost);
         } catch (InvalidStateTransitionException | RuntimeException $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }

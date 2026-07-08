@@ -143,9 +143,15 @@ function verifyLicenseFile(fileText, publicKeyBytes, localHostId, today):
    신뢰하지 않는다. 위 순서를 뒤집지 말 것.
 2. **`data` 는 디코드 전 문자열로 검증** — base64 디코드한 바이트가 아니라 `data` **문자열**을
    서명 검증에 넣는다(서버가 문자열에 서명했기 때문).
-3. **`host_id` 산출** — `localHostId` 는 발급 시 사용한 것과 **동일한 방식**으로 현재 머신에서
-   계산해야 한다(예: MAC·디스크 시리얼·CPU ID 조합 등, 기존 클라이언트 규칙을 따른다).
-   발급 신청 시 수집한 값과 런타임 계산 값이 일치해야 `HOST_MISMATCH` 를 피한다.
+3. **`host_id` 산출** — `localHostId` 는 발급 시 사용한 것과 **완전히 동일한 규칙**으로 현재
+   머신에서 계산해야 한다. 표준 산출 규칙은 `tools/hostid` 유틸리티가 정의한다(고객이 발급
+   신청 시 이 도구로 호스트ID 를 뽑아 제출한다):
+   - macOS `IOPlatformUUID` / Windows `MachineGuid` 를 대문자·trim 정규화 →
+     `SHA-256("AILICET-NODELOCK-v1:" + 정규화값)` → 앞 8바이트 대문자 hex 를
+     `XXXX-XXXX-XXXX-XXXX` 로 포맷.
+   - 회귀 방지 고정 벡터: 입력 `564D0102-0304-0506-0708-090A0B0C0D0E` → `7121-0B91-F5B6-AA1B`.
+   - 런타임 검증기는 반드시 이 규칙을 그대로 재현해야 한다. 다른 방식(MAC·디스크 시리얼 등)을
+     쓰면 발급값과 달라져 모든 라이센스가 `HOST_MISMATCH` 로 실패한다. 상세: `tools/hostid/README.md`.
 4. **날짜 비교** — 서버는 UTC 기준(`YYYY-MM-DD`)으로 만료를 기록한다. 문자열 사전식 비교로
    충분하다(`"2026-07-08" < "2026-07-09"`).
 5. **거부 사유 로깅** — 어떤 단계에서 실패했는지 로그로 남기면 지원 대응이 쉽다.
