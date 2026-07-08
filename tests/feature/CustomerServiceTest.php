@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\DTO\CustomerRequest;
+use App\Integrations\AitesseraClient;
 use App\Services\CustomerService;
+use CodeIgniter\Config\Services;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
 
@@ -27,7 +29,7 @@ final class CustomerServiceTest extends CIUnitTestCase
         $this->service = new CustomerService();
     }
 
-    private function req(string $type, string $company, string $email, ?int $parent = null): CustomerRequest
+    private function req(string $type, string $company, string $email, ?int $parent = null, ?int $userId = null): CustomerRequest
     {
         return new CustomerRequest(
             customerType: $type,
@@ -37,6 +39,7 @@ final class CustomerServiceTest extends CIUnitTestCase
             parentId: $parent,
             phone: '010-0000-0000',
             isActive: true,
+            userId: $userId,
         );
     }
 
@@ -89,6 +92,68 @@ final class CustomerServiceTest extends CIUnitTestCase
 
         $page3 = $this->service->paginate('', '', 3, 10);
         $this->assertCount(5, $page3['items']); // 마지막 페이지 잔여
+    }
+
+    public function testChildClientsReturnsOnlyOwnClients(): void
+    {
+        $agencyA = $this->service->create($this->req('agency', '대행A', 'a@n.com'));
+        $agencyB = $this->service->create($this->req('agency', '대행B', 'b@n.com'));
+
+        $this->service->create($this->req('client', '고객1', 'c1@n.com', $agencyA));
+        $this->service->create($this->req('client', '고객2', 'c2@n.com', $agencyA));
+        $this->service->create($this->req('client', '타대행고객', 'c3@n.com', $agencyB));
+        $this->service->create($this->req('client', '무소속고객', 'c4@n.com'));
+
+        $clients = $this->service->childClients($agencyA);
+
+        $this->assertCount(2, $clients);
+        $this->assertSame(['고객1', '고객2'], array_column($clients, 'company_name'));
+    }
+
+    public function testChildClientsEmptyWhenNone(): void
+    {
+        $agency = $this->service->create($this->req('agency', '대행', 'solo@n.com'));
+
+        $this->assertSame([], $this->service->childClients($agency));
+    }
+
+    public function testLinkedAccountReturnsNullWhenNoUserIdOrToken(): void
+    {
+        $this->assertNull($this->service->linkedAccount(null, 'token'));
+        $this->assertNull($this->service->linkedAccount(0, 'token'));
+        $this->assertNull($this->service->linkedAccount(5, null));
+    }
+
+    public function testLinkedAccountFetchesFromAitessera(): void
+    {
+        $client = new class ('http://aitessera') extends AitesseraClient {
+            public function getUser(string $token, int $id): array
+            {
+                return ['id' => $id, 'email' => 'link@n.com', 'name' => '연동회원', 'is_active' => true];
+            }
+        };
+        Services::injectMock('aitesseraClient', $client);
+
+        $result = $this->service->linkedAccount(7, 'token');
+
+        $this->assertNotNull($result);
+        $this->assertSame(7, $result['id']);
+        $this->assertSame('link@n.com', $result['email']);
+        $this->assertSame('연동회원', $result['name']);
+        $this->assertTrue($result['is_active']);
+    }
+
+    public function testLinkedAccountReturnsNullOnAitesseraFailure(): void
+    {
+        $client = new class ('http://aitessera') extends AitesseraClient {
+            public function getUser(string $token, int $id): array
+            {
+                throw new \App\Exceptions\AitesseraException('만료', 'TOKEN_EXPIRED', 401);
+            }
+        };
+        Services::injectMock('aitesseraClient', $client);
+
+        $this->assertNull($this->service->linkedAccount(7, 'token'));
     }
 
     public function testPaginateSearchAndTypeFilter(): void

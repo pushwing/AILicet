@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\DTO\CustomerRequest;
+use App\Exceptions\AitesseraException;
 use App\Models\CustomerModel;
 use RuntimeException;
 
@@ -63,6 +64,47 @@ final class CustomerService
         $row = model(CustomerModel::class)->find($id);
 
         return $row;
+    }
+
+    /**
+     * 대행사에 소속된 하위 고객 목록(대행사 상세용).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function childClients(int $agencyId): array
+    {
+        return model(CustomerModel::class)->clientsOf($agencyId);
+    }
+
+    /**
+     * 회원 레코드의 AITessera 연동 계정 정보(이메일·이름 병기용).
+     *
+     * 표시 전용 베스트에포트 — 토큰 없음·조회 실패 시 null 을 반환하고 화면은 user_id 만 노출한다.
+     *
+     * @return array{id:int, email:?string, name:?string, is_active:?bool}|null
+     */
+    public function linkedAccount(?int $userId, ?string $token): ?array
+    {
+        if ($userId === null || $userId <= 0 || $token === null) {
+            return null;
+        }
+
+        try {
+            $user = service('aitesseraClient')->getUser($token, $userId);
+        } catch (AitesseraException) {
+            return null;
+        }
+
+        if ($user === []) {
+            return null;
+        }
+
+        return [
+            'id'        => $userId,
+            'email'     => isset($user['email']) ? (string) $user['email'] : null,
+            'name'      => isset($user['name']) ? (string) $user['name'] : null,
+            'is_active' => isset($user['is_active']) ? (bool) $user['is_active'] : null,
+        ];
     }
 
     /**

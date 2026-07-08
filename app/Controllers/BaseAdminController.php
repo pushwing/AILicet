@@ -39,4 +39,12 @@ abstract class BaseAdminController extends Controller
     {
         return view($view, array_merge($this->viewData, $data));
     }
+
+    /** 로그인 운영자의 AITessera 액세스 토큰. 없으면 null. */
+    protected function operatorToken(): ?string
+    {
+        $token = session()->get('authUser')['token'] ?? null;
+
+        return is_string($token) && $token !== '' ? $token : null;
+    }
 }

@@ -11,9 +11,10 @@ use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * 운영자 — AITessera 회원(계정) 관리.
+ * 운영자 관리 — AITessera 운영자 계정 관리.
  *
- * 로그인 운영자의 AITessera 액세스 토큰으로 회원 목록·상세·수정 및 계정 생성 API를 소비한다.
+ * 로그인 운영자의 AITessera 액세스 토큰으로 운영자 목록·상세·수정 및 운영자 계정 생성 API를 소비한다.
+ * 목록·생성은 운영자(UserRole::Operator)로 한정한다. 대행사/고객은 회원관리에서 관리한다.
  */
 final class AccountController extends BaseAdminController
 {
@@ -21,13 +22,12 @@ final class AccountController extends BaseAdminController
     public function index(): string
     {
         if ($this->operatorToken() === null) {
-            return $this->render('admin/accounts/unavailable', ['title' => '회원 계정', 'activeMenu' => 'accounts']);
+            return $this->render('admin/accounts/unavailable', ['title' => '운영자 관리', 'activeMenu' => 'accounts']);
         }
 
         return $this->render('admin/accounts/index', [
-            'title'      => '회원 계정',
+            'title'      => '운영자 관리',
             'activeMenu' => 'accounts',
-            'roles'      => UserRole::cases(),
         ]);
     }
 
@@ -39,10 +39,11 @@ final class AccountController extends BaseAdminController
             return $this->jsonError('AITESSERA_NOT_CONNECTED', 'AITessera 로그인 세션이 필요합니다.', 401);
         }
 
+        // 운영자 관리 화면 — 목록은 운영자(role=1)로 고정한다. 요청의 role 파라미터는 무시.
         $query = array_filter([
             'page'      => (int) ($this->request->getGet('page') ?? 1),
             'per_page'  => (int) ($this->request->getGet('per_page') ?? 20),
-            'role'      => $this->request->getGet('role'),
+            'role'      => (string) UserRole::Operator->value,
             'is_active' => $this->request->getGet('is_active'),
             'q'         => $this->request->getGet('q'),
             'sort'      => $this->request->getGet('sort'),
@@ -148,7 +149,7 @@ final class AccountController extends BaseAdminController
         ]);
     }
 
-    /** GET /admin/accounts/new — 계정 생성 폼. */
+    /** GET /admin/accounts/new — 운영자 생성 폼. */
     public function new(): string|RedirectResponse
     {
         if ($this->operatorToken() === null) {
@@ -156,14 +157,13 @@ final class AccountController extends BaseAdminController
         }
 
         return $this->render('admin/accounts/form', [
-            'title'      => '계정 생성',
+            'title'      => '운영자 등록',
             'activeMenu' => 'accounts',
             'account'    => null,
-            'roles'      => UserRole::cases(),
         ]);
     }
 
-    /** POST /admin/accounts — 계정 생성(운영자/대행사/일반회원). */
+    /** POST /admin/accounts — 운영자 계정 생성. */
     public function create(): RedirectResponse
     {
         $token = $this->operatorToken();
@@ -176,7 +176,8 @@ final class AccountController extends BaseAdminController
             service('aitesseraClient')->createAccount($token, [
                 'email'       => (string) $this->request->getPost('email'),
                 'password'    => (string) $this->request->getPost('password'),
-                'role'        => (int) $this->request->getPost('role'),
+                // 운영자 관리 화면 — 운영자(role=1)로 고정 생성
+                'role'        => UserRole::Operator->value,
                 'name'        => (string) $this->request->getPost('name'),
                 'contact'     => (string) $this->request->getPost('contact'),
                 'company'     => $this->request->getPost('company') ?: null,
@@ -190,7 +191,7 @@ final class AccountController extends BaseAdminController
             return redirect()->back()->withInput()->with('error', $e->getMessage());
         }
 
-        return redirect()->to('/admin/accounts')->with('message', '계정이 생성되었습니다.');
+        return redirect()->to('/admin/accounts')->with('message', '운영자 계정이 생성되었습니다.');
     }
 
     /** GET /admin/accounts/{id}/edit — 회원 수정 폼. */
@@ -212,10 +213,9 @@ final class AccountController extends BaseAdminController
         }
 
         return $this->render('admin/accounts/form', [
-            'title'      => '회원 수정',
+            'title'      => '운영자 수정',
             'activeMenu' => 'accounts',
             'account'    => $account,
-            'roles'      => UserRole::cases(),
         ]);
     }
 
@@ -250,14 +250,6 @@ final class AccountController extends BaseAdminController
             return redirect()->back()->withInput()->with('error', $e->getMessage());
         }
 
-        return redirect()->to('/admin/accounts')->with('message', '회원 정보가 수정되었습니다.');
-    }
-
-    /** 로그인 운영자의 AITessera 액세스 토큰. */
-    private function operatorToken(): ?string
-    {
-        $token = session()->get('authUser')['token'] ?? null;
-
-        return is_string($token) && $token !== '' ? $token : null;
+        return redirect()->to('/admin/accounts')->with('message', '운영자 정보가 수정되었습니다.');
     }
 }

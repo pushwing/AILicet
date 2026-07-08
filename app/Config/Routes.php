@@ -57,7 +57,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('/', 'Admin\DashboardController::index');
     });
 
-    // 회원 계정(AITessera) — 운영자 전용
+    // 운영자 관리(AITessera) — 운영자 전용
     $routes->group('accounts', ['filter' => 'adminAuth:operator'], static function (RouteCollection $routes): void {
         $routes->get('/', 'Admin\AccountController::index');
         $routes->get('data', 'Admin\AccountController::data');
