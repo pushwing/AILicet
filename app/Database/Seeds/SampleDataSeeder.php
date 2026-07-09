@@ -35,7 +35,7 @@ final class SampleDataSeeder extends Seeder
         $licenses = $this->seedLicenses($productIds); // 백업용 → [['id'=>, 'key'=>, 'host'=>]]
         $this->seedAuditLogs($licenses);              // 50개
 
-        echo "SampleDataSeeder 완료 — 상품 5 / 모듈 20 / 라이센스 " . count($licenses) . " / 감사로그 50\n";
+        echo 'SampleDataSeeder 완료 — 상품 5 / 모듈 20 / 라이센스 ' . count($licenses) . " / 감사로그 50\n";
     }
 
     /**

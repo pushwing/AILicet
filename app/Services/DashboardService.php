@@ -239,7 +239,7 @@ final class DashboardService
         foreach ($rows as $row) {
             $id = (int) $row['license_id'];
             $sn = (string) ($row['license_sn'] ?? '');
-            if (!isset($map[$id]) && $sn !== '') {
+            if (! isset($map[$id]) && $sn !== '') {
                 $map[$id] = $sn; // 최신(id DESC) 1건만
             }
         }

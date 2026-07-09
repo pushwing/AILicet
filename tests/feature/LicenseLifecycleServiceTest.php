@@ -190,7 +190,7 @@ final class LicenseLifecycleServiceTest extends CIUnitTestCase
         $id = $this->issueNodeLock();
 
         // 저장 단계에서 실패하는 스토리지 → 재발급 중 예외
-        $failingStorage = new class implements LicenseStorageInterface {
+        $failingStorage = new class () implements LicenseStorageInterface {
             public function put(string $relativePath, string $contents): string
             {
                 throw new RuntimeException('저장 실패(의도적)');
