@@ -173,7 +173,7 @@ final class AiAbuseDetectionService
      */
     private function judge(AiClient $ai, array $stats): ?array
     {
-        $raw = $ai->complete(AiModelTier::Reasoning, $this->systemPrompt(), json_encode($stats, JSON_UNESCAPED_UNICODE) ?: '{}');
+        $raw = $ai->complete(AiModelTier::Reasoning, $this->systemPrompt(), json_encode($this->externalPayload($stats), JSON_UNESCAPED_UNICODE) ?: '{}');
 
         if (preg_match('/\{.*\}/s', $raw, $m) !== 1) {
             return null;
@@ -193,6 +193,22 @@ final class AiAbuseDetectionService
             'severity'  => $severity,
             'reason'    => mb_substr(trim((string) ($decoded['reason'] ?? '')), 0, 500),
         ];
+    }
+
+    /**
+     * 외부 AI 제공자로 보낼 통계 페이로드를 만든다.
+     * 판단에는 집계 수치(distinct_hosts·distinct_ips 등)만 필요하므로, 원본 host_id·IP(PII)는 제외한다.
+     * 내부 audit_logs.detail 저장분은 원본을 유지한다(감사·재처리용) — 여기서 마스킹하는 것은 외부 전송분뿐이다.
+     *
+     * @param array<string, mixed> $stats
+     *
+     * @return array<string, mixed>
+     */
+    private function externalPayload(array $stats): array
+    {
+        unset($stats['hosts'], $stats['ips']);
+
+        return $stats;
     }
 
     private function systemPrompt(): string
