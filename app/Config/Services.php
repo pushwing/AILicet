@@ -2,38 +2,42 @@
 
 namespace Config;
 
+use App\Integrations\AiClient;
 use App\Integrations\AitesseraClient;
+use App\Integrations\AnthropicAiClient;
+use App\Integrations\NullAiClient;
 use App\Libraries\HtmlSanitizer;
 use App\Libraries\JwtLibrary;
 use App\Libraries\JwtVerifier;
 use App\Libraries\LicenseSigner;
+use App\Licensing\Storage\LicenseStorageInterface;
+use App\Licensing\Storage\LocalLicenseStorage;
+use App\Licensing\Strategy\LicensePayloadStrategyResolver;
 use App\Notifications\LogNotifier;
 use App\Notifications\Notifier;
 use App\Notifications\SlackNotifier;
 use App\Queue\LogQueue;
 use App\Queue\RedisLogQueue;
 use App\Services\AbuseDetectionService;
-use App\Services\LicenseExpiryService;
-use App\Services\LogQueueConsumer;
-use Predis\Client as Redis;
-use App\Licensing\Storage\LicenseStorageInterface;
-use App\Licensing\Storage\LocalLicenseStorage;
-use App\Licensing\Strategy\LicensePayloadStrategyResolver;
 use App\Services\AgencyService;
+use App\Services\AuditLogQueryService;
 use App\Services\ClientService;
 use App\Services\ClientSignupService;
 use App\Services\CustomerService;
 use App\Services\DashboardService;
 use App\Services\FloatingLicenseService;
+use App\Services\LicenseExpiryService;
 use App\Services\LicenseLifecycleService;
 use App\Services\LicensePolicyValidator;
-use App\Services\AuditLogQueryService;
 use App\Services\LicenseQueryService;
-use App\Services\NodeLockLicenseService;
+use App\Services\LogClassificationService;
+use App\Services\LogQueueConsumer;
 use App\Services\ModuleService;
+use App\Services\NodeLockLicenseService;
 use App\Services\NotificationService;
 use App\Services\ProductService;
 use CodeIgniter\Config\BaseService;
+use Predis\Client as Redis;
 
 /**
  * Services Configuration file.
@@ -353,6 +357,37 @@ class Services extends BaseService
         }
 
         return new LogQueueConsumer(static::logQueue());
+    }
+
+    /**
+     * AI(Anthropic) 클라이언트 — ANTHROPIC_API_KEY 설정 시 AnthropicAiClient, 없으면 NullAiClient(no-op).
+     *
+     * 테스트에서 injectMock('aiClient', ...) 으로 대체 가능.
+     */
+    public static function aiClient(bool $getShared = true): AiClient
+    {
+        if ($getShared) {
+            return static::getSharedInstance('aiClient');
+        }
+
+        $apiKey = (string) env('ANTHROPIC_API_KEY');
+        if ($apiKey === '') {
+            return new NullAiClient();
+        }
+
+        return new AnthropicAiClient($apiKey, (string) (env('ai.baseURL') ?: 'https://api.anthropic.com'));
+    }
+
+    /**
+     * 수집 로그 AI 자동 분류·요약 서비스.
+     */
+    public static function logClassificationService(bool $getShared = true): LogClassificationService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('logClassificationService');
+        }
+
+        return new LogClassificationService(static::aiClient());
     }
 
     /**

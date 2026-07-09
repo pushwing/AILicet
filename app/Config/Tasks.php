@@ -22,5 +22,9 @@ final class Tasks extends BaseTasks
 
         // 매분 로그 큐 소비(원시파일 + DB)
         $schedule->command('logs:consume')->everyMinute()->named('logs-consume');
+
+        // 5분마다 미분류 로그 AI 분류·요약(ANTHROPIC_API_KEY 미설정 시 no-op)
+        // singleInstance: 배치가 5분을 넘겨도 다음 틱과 겹쳐 AI 이중 호출되지 않도록 캐시 락.
+        $schedule->command('ai:classify-logs')->everyFiveMinutes()->named('ai-classify-logs')->singleInstance();
     }
 }
