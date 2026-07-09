@@ -7,22 +7,18 @@ namespace App\Integrations;
 use App\Exceptions\AiException;
 
 /**
- * Anthropic Messages API 클라이언트.
+ * Groq API 클라이언트 — OpenAI 호환 Chat Completions(`/openai/v1/chat/completions`).
  *
- * `POST {baseUrl}/v1/messages` 를 호출해 텍스트 응답을 받는다.
- * AitesseraClient 와 동일하게 CI4 `curlrequest` + 5초 타임아웃 + http_errors:false 패턴을 따른다.
+ * AnthropicAiClient 와 동일하게 CI4 `curlrequest` + 5초 타임아웃 + http_errors:false 패턴을 따른다.
+ * Bearer 인증, OpenAI 형식 messages(system+user)로 호출한다.
  *
- * ⚠️ 실호출 검증은 후속 작업(실제 ANTHROPIC_API_KEY 주입 후)에서 수행한다.
- *    현재는 인터페이스·파이프라인 배선을 완성하고 호출 골격만 제공한다.
+ * ⚠️ 실호출 검증은 후속(실제 GROQ_API_KEY 주입 후)에서 수행한다.
  */
-final class AnthropicAiClient implements AiClient
+final class GroqAiClient implements AiClient
 {
-    /** Anthropic API 버전 헤더(고정). */
-    private const string API_VERSION = '2023-06-01';
-
     public function __construct(
         private readonly string $apiKey,
-        private readonly string $baseUrl = 'https://api.anthropic.com',
+        private readonly string $baseUrl = 'https://api.groq.com',
     ) {
     }
 
@@ -37,20 +33,17 @@ final class AnthropicAiClient implements AiClient
             throw new AiException('AI 클라이언트가 설정되지 않았습니다.', 'AI_NOT_CONFIGURED', 503);
         }
 
-        $model = $this->model($tier);
-
-        $response = service('curlrequest')->request('POST', rtrim($this->baseUrl, '/') . '/v1/messages', [
+        $response = service('curlrequest')->request('POST', rtrim($this->baseUrl, '/') . '/openai/v1/chat/completions', [
             'headers' => [
-                'x-api-key'         => $this->apiKey,
-                'anthropic-version' => self::API_VERSION,
-                'content-type'      => 'application/json',
-                'accept'            => 'application/json',
+                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Content-Type'  => 'application/json',
+                'Accept'        => 'application/json',
             ],
             'json' => [
-                'model'      => $model,
+                'model'      => $this->model($tier),
                 'max_tokens' => $maxTokens,
-                'system'     => $system,
                 'messages'   => [
+                    ['role' => 'system', 'content' => $system],
                     ['role' => 'user', 'content' => $prompt],
                 ],
             ],
@@ -75,30 +68,26 @@ final class AnthropicAiClient implements AiClient
         return $this->extractText($body);
     }
 
-    /** 작업 등급 → Anthropic 모델명. */
+    /** 작업 등급 → Groq 모델명. */
     private function model(AiModelTier $tier): string
     {
         return match ($tier) {
-            AiModelTier::Cheap     => 'claude-haiku-4-5',
-            AiModelTier::Reasoning => 'claude-sonnet-5',
+            AiModelTier::Cheap     => 'llama-3.1-8b-instant',
+            AiModelTier::Reasoning => 'llama-3.3-70b-versatile',
         };
     }
 
     /**
-     * Messages API 응답에서 텍스트 블록을 이어붙여 추출한다.
+     * OpenAI 호환 응답에서 첫 choice 의 message.content 를 추출한다.
      *
      * @param array<string, mixed> $body
      */
     private function extractText(array $body): string
     {
-        $content = is_array($body['content'] ?? null) ? $body['content'] : [];
-        $text    = '';
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $text .= (string) ($block['text'] ?? '');
-            }
-        }
+        $choices = is_array($body['choices'] ?? null) ? $body['choices'] : [];
+        $first   = is_array($choices[0] ?? null) ? $choices[0] : [];
+        $message = is_array($first['message'] ?? null) ? $first['message'] : [];
 
-        return $text;
+        return (string) ($message['content'] ?? '');
     }
 }

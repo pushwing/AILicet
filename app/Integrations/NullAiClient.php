@@ -20,7 +20,7 @@ final class NullAiClient implements AiClient
         return false;
     }
 
-    public function complete(string $model, string $system, string $prompt, int $maxTokens = 1024): string
+    public function complete(AiModelTier $tier, string $system, string $prompt, int $maxTokens = 1024): string
     {
         throw new AiException('AI 클라이언트가 설정되지 않았습니다.', 'AI_NOT_CONFIGURED', 503);
     }

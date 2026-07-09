@@ -63,13 +63,21 @@ final class LicenseDaily extends BaseCommand
             CLI::write('  부정사용 감지: ' . count($detected) . '건', 'red');
         }
 
+        // 3-2) AI 이상 탐지 보강(행동 패턴) → 운영팀 Slack 초안(실제 정지는 사람 확정)
+        $anomalies = service('aiAbuseDetectionService')->detect($entries);
+        if ($anomalies !== []) {
+            $lines = array_map(static fn ($a) => "[{$a['severity']}] key {$a['license_key']} — {$a['reason']}", $anomalies);
+            service('notifier')->send('AI 부정사용 이상 탐지(초안)', implode("\n", $lines), 'warning');
+            CLI::write('  AI 이상 탐지: ' . count($anomalies) . '건(초안)', 'yellow');
+        }
+
         CLI::write('license:daily 완료', 'green');
     }
 
     /**
      * 원시 사용 로그(날짜별 JSON 라인)를 엔트리 배열로 읽는다.
      *
-     * @return list<array{license_key?:string, host_id?:string, ip?:string}>
+     * @return list<array{license_key?:string, host_id?:string, ip?:string, logged_at?:string}>
      */
     private function readRawLog(string $date): array
     {
@@ -83,10 +91,13 @@ final class LicenseDaily extends BaseCommand
         foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
             $row = json_decode($line, true);
             if (is_array($row) && isset($row['license_key'])) {
+                // frontApi 사용 로그(NodeLockAuthService)는 시각을 'ts'(ISO 8601)로 남긴다.
+                // 다른 생산자 호환을 위해 logged_at 도 폴백으로 허용한다.
                 $entries[] = [
                     'license_key' => (string) $row['license_key'],
                     'host_id'     => (string) ($row['host_id'] ?? ''),
                     'ip'          => (string) ($row['ip'] ?? ''),
+                    'logged_at'   => (string) ($row['ts'] ?? $row['logged_at'] ?? ''),
                 ];
             }
         }

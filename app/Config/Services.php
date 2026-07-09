@@ -5,6 +5,7 @@ namespace Config;
 use App\Integrations\AiClient;
 use App\Integrations\AitesseraClient;
 use App\Integrations\AnthropicAiClient;
+use App\Integrations\GroqAiClient;
 use App\Integrations\NullAiClient;
 use App\Libraries\HtmlSanitizer;
 use App\Libraries\JwtLibrary;
@@ -20,6 +21,7 @@ use App\Queue\LogQueue;
 use App\Queue\RedisLogQueue;
 use App\Services\AbuseDetectionService;
 use App\Services\AgencyService;
+use App\Services\AiAbuseDetectionService;
 use App\Services\AuditLogQueryService;
 use App\Services\ClientService;
 use App\Services\ClientSignupService;
@@ -360,7 +362,8 @@ class Services extends BaseService
     }
 
     /**
-     * AI(Anthropic) 클라이언트 — ANTHROPIC_API_KEY 설정 시 AnthropicAiClient, 없으면 NullAiClient(no-op).
+     * AI 클라이언트 — AI_PROVIDER(anthropic|groq)로 제공자를 선택한다.
+     * 해당 제공자 API 키가 있으면 그 클라이언트를, 없으면 NullAiClient(no-op)를 반환한다.
      *
      * 테스트에서 injectMock('aiClient', ...) 으로 대체 가능.
      */
@@ -370,12 +373,21 @@ class Services extends BaseService
             return static::getSharedInstance('aiClient');
         }
 
-        $apiKey = (string) env('ANTHROPIC_API_KEY');
-        if ($apiKey === '') {
-            return new NullAiClient();
+        $provider = strtolower((string) (env('AI_PROVIDER') ?: 'anthropic'));
+
+        if ($provider === 'groq') {
+            $key = (string) env('GROQ_API_KEY');
+
+            return $key === ''
+                ? new NullAiClient()
+                : new GroqAiClient($key, (string) (env('groq.baseURL') ?: 'https://api.groq.com'));
         }
 
-        return new AnthropicAiClient($apiKey, (string) (env('ai.baseURL') ?: 'https://api.anthropic.com'));
+        $key = (string) env('ANTHROPIC_API_KEY');
+
+        return $key === ''
+            ? new NullAiClient()
+            : new AnthropicAiClient($key, (string) (env('ai.baseURL') ?: 'https://api.anthropic.com'));
     }
 
     /**
@@ -388,6 +400,18 @@ class Services extends BaseService
         }
 
         return new LogClassificationService(static::aiClient());
+    }
+
+    /**
+     * AI 부정사용 이상 탐지(보강) 서비스.
+     */
+    public static function aiAbuseDetectionService(bool $getShared = true): AiAbuseDetectionService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('aiAbuseDetectionService');
+        }
+
+        return new AiAbuseDetectionService(static::aiClient());
     }
 
     /**
