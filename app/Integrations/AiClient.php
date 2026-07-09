@@ -7,10 +7,11 @@ namespace App\Integrations;
 use App\Exceptions\AiException;
 
 /**
- * AI(Anthropic) 호출 공용 계약.
+ * AI 호출 공용 계약(제공자 독립).
  *
  * 로그 분류·요약, 이상탐지 보강, 문의 답변 초안 등 여러 유스케이스가 공유한다.
  * 프롬프트 구성·응답 파싱은 각 Service 레이어의 책임이고, 이 계약은 저수준 호출만 담당한다.
+ * 구체 모델명 대신 AiModelTier 를 받아 제공자별(Anthropic·Groq) 모델로 매핑한다.
  */
 interface AiClient
 {
@@ -23,14 +24,14 @@ interface AiClient
     /**
      * 단일 메시지 완성 요청. system 지침과 user 프롬프트를 주고 모델의 텍스트 응답을 받는다.
      *
-     * @param string $model     모델 ID (예: claude-haiku-4-5, claude-sonnet-5)
-     * @param string $system    system 지침
-     * @param string $prompt    user 프롬프트
-     * @param int    $maxTokens 최대 출력 토큰
+     * @param AiModelTier $tier      작업 등급(저비용/추론) — 구현체가 실제 모델로 매핑
+     * @param string      $system    system 지침
+     * @param string      $prompt    user 프롬프트
+     * @param int         $maxTokens 최대 출력 토큰
      *
      * @return string 모델이 생성한 텍스트
      *
      * @throws AiException 미설정·통신 실패·비2xx 응답
      */
-    public function complete(string $model, string $system, string $prompt, int $maxTokens = 1024): string;
+    public function complete(AiModelTier $tier, string $system, string $prompt, int $maxTokens = 1024): string;
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\LogCategory;
 use App\Integrations\AiClient;
+use App\Integrations\AiModelTier;
 use App\Integrations\NullAiClient;
 use App\Models\LogModel;
 use App\Services\LogClassificationService;
@@ -39,7 +40,7 @@ final class LogClassificationServiceTest extends CIUnitTestCase
                 return $this->configured;
             }
 
-            public function complete(string $model, string $system, string $prompt, int $maxTokens = 1024): string
+            public function complete(AiModelTier $tier, string $system, string $prompt, int $maxTokens = 1024): string
             {
                 return $this->response;
             }

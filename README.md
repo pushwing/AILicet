@@ -85,8 +85,10 @@ AILicet 은 성형·토탈 광고 솔루션(AIvance 제품군)을 위한 **라�
 - **#18 로그 파이프라인** — frontApi `POST /logs` → Redis 큐 → CI4 소비자(원시파일+DB), dead-letter
 
 ### P8 · AI 업무 효율화 (#66)
-- **공용 AI 클라이언트** — `AiClient` 인터페이스 + `AnthropicAiClient`(Messages API) + `NullAiClient`(no-op). `Services::aiClient()` 조건부 팩토리가 `ANTHROPIC_API_KEY` 유무로 구현을 분기 → 키 없이도 파이프라인·테스트가 안전하게 동작. 프롬프트·파싱은 Service 책임, 클라이언트는 저수준 호출만 → 후속 서브이슈가 재사용
-- **수집 로그 자동 분류·요약**(1순위) — `logs:consume`이 저장한 로그를 별도 배치 `ai:classify-logs`(5분 주기)가 미분류분만 골라 저비용 `claude-haiku-4-5` 로 카테고리(`LogCategory` 화이트리스트)·요약을 채워 넣는다. `ai_processed_at` 마커로 재분류 방지 겸 개별 실패 자동 재시도. AI 실제 호출 검증은 후속(현재 인터페이스·파이프라인·스텁 완성)
+- **공용 AI 클라이언트(멀티 제공자)** — `AiClient` 인터페이스 + `AnthropicAiClient`(Claude Messages API) + `GroqAiClient`(OpenAI 호환) + `NullAiClient`(no-op). `Services::aiClient()`가 `AI_PROVIDER`(anthropic|groq)로 제공자를 선택하고, 해당 키 미설정 시 no-op → 키 없이도 파이프라인·테스트가 안전하게 동작. 서비스는 구체 모델명 대신 `AiModelTier`(Cheap/Reasoning)를 넘기고 각 클라이언트가 제공자별 모델로 매핑. 프롬프트·파싱은 Service 책임 → 후속 서브이슈가 재사용
+- **수집 로그 자동 분류·요약**(#66 1순위) — `logs:consume`이 저장한 로그를 별도 배치 `ai:classify-logs`(5분 주기)가 미분류분만 골라 저비용 등급으로 카테고리(`LogCategory` 화이트리스트)·요약을 채워 넣는다. `ai_processed_at` 마커로 재분류 방지 겸 개별 실패 자동 재시도
+- **부정사용 이상 탐지 보강**(#80) — 규칙 기반 `AbuseDetectionService`가 못 잡는 행동 패턴 이상을, `AiAbuseDetectionService`가 사용 로그를 라이선스별 일일 집계(고유 호스트·IP 수, 사용 빈도, 시간대)해 추론 등급으로 판단한다. 이상 건은 `audit_logs`에 `ai_anomaly`로 기록되고 `license:daily` 배치에서 운영팀 Slack **초안**으로 통보 — 실제 정지는 운영자가 기존 화면에서 **사람 확정**(human-in-the-loop). 같은 날 재실행 중복은 `existsSince`로 방지
+- AI 실제 호출 검증은 후속(현재 인터페이스·파이프라인·스텁 완성, 미설정 시 no-op)
 
 ---
 
@@ -109,11 +111,13 @@ make serve            # FrankenPHP (포트 8300) — 또는 make serve-spark
 - `JWT_SECRET` — HS256 검증용 공유 시크릿(전환기 한정, AITessera 서명키와 동일). RS256 단독 전환 후 `JWT_VERIFY_ALGOS=RS256` 으로 좁히면 불필요.
 - `LICENSE_TOKEN_SECRET` — 자체 발급 토큰(플로팅 활성화 등)용 HS256 시크릿. 미설정 시 `JWT_SECRET` 폴백.
 
-**AI 연동(선택)** — 수집 로그 자동 분류·요약 등 AI 기능용. 미설정 시 안전하게 비활성(no-op).
-- `ANTHROPIC_API_KEY` — Anthropic API 키. 설정 시 `ai:classify-logs` 배치가 활성화된다.
-- `ai.baseURL` — 기본 `https://api.anthropic.com`.
+**AI 연동(선택)** — 로그 분류·요약, 부정사용 이상 탐지 등 AI 기능용. 미설정 시 안전하게 비활성(no-op).
+- `AI_PROVIDER` — `anthropic`(기본) 또는 `groq`. 제공자를 하나 선택한다.
+- `ANTHROPIC_API_KEY` / `ai.baseURL` — Claude 사용 시. baseURL 기본 `https://api.anthropic.com`.
+- `GROQ_API_KEY` / `groq.baseURL` — Groq 사용 시. baseURL 기본 `https://api.groq.com`.
   ```bash
-  php spark ai:classify-logs --limit 100   # 수동 실행(스케줄러는 5분 주기 자동)
+  php spark ai:classify-logs --limit 100   # 로그 분류(스케줄러는 5분 주기 자동)
+  php spark license:daily                   # 일일 배치 — 부정사용 이상 탐지 포함
   ```
 
 ### frontApi (pure PHP)

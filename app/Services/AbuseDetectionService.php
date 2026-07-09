@@ -42,7 +42,7 @@ final class AbuseDetectionService
                 continue;
             }
 
-            $licenseId = $this->licenseIdByKey($key);
+            $licenseId = model(LicenseHistoryModel::class)->licenseIdByKey($key);
             if ($licenseId === null) {
                 continue; // 알 수 없는 키는 여기서 다루지 않음
             }
@@ -87,18 +87,5 @@ final class AbuseDetectionService
         ]);
 
         return ['event_type' => $type->value, 'license_key' => $key, 'host_id' => $host];
-    }
-
-    private function licenseIdByKey(string $key): ?int
-    {
-        /** @var array{license_id:int}|null $row */
-        $row = model(LicenseHistoryModel::class)
-            ->select('license_id')
-            ->where('license_key', $key)
-            ->whereIn('type', ['issue', 'reissue'])
-            ->orderBy('id', 'DESC')
-            ->first();
-
-        return $row !== null ? (int) $row['license_id'] : null;
     }
 }

@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Enums\LogCategory;
 use App\Exceptions\AiException;
 use App\Integrations\AiClient;
+use App\Integrations\AiModelTier;
 use App\Models\LogModel;
 use Throwable;
 
@@ -18,9 +19,6 @@ use Throwable;
  */
 final class LogClassificationService
 {
-    /** 분류·요약은 저비용 모델 사용(CLAUDE.md 모델 선택 기준). */
-    private const string MODEL = 'claude-haiku-4-5';
-
     /** 실패 재시도 한도 — 초과 시 dead-letter 로 격리해 head-of-line 블로킹을 막는다. */
     private const int MAX_ATTEMPTS = 5;
 
@@ -105,7 +103,8 @@ final class LogClassificationService
      */
     private function classifyOne(AiClient $ai, array $row): array
     {
-        $raw    = $ai->complete(self::MODEL, $this->systemPrompt(), $this->userPrompt($row));
+        // 분류·요약은 저비용 등급 사용(CLAUDE.md 모델 선택 기준).
+        $raw    = $ai->complete(AiModelTier::Cheap, $this->systemPrompt(), $this->userPrompt($row));
         $parsed = $this->parse($raw);
 
         // 파싱 실패는 조용히 'other' 로 삼키지 않고 실패로 처리한다(가시화 + 재시도/격리).

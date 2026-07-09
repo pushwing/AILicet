@@ -203,6 +203,7 @@ final class SampleDataSeeder extends Seeder
             AuditEventType::RevokedKeyUse       => ['message' => '재발급 후 폐기된 키 사용', 'revoked_key' => sprintf('OLD-%04d', $i)],
             AuditEventType::DuplicateActivation => ['message' => '플로팅 이중 활성화 시도', 'active_sessions' => $i % 4 + 2],
             AuditEventType::UsageOverLimit      => ['message' => '사용량 한도 초과', 'limit' => 100, 'used' => 100 + ($i % 50 + 1)],
+            AuditEventType::AiAnomaly           => ['message' => 'AI 행동 이상 탐지(초안)', 'severity' => ['low', 'medium', 'high'][$i % 3], 'reason' => '단일 키가 다수 호스트에서 사용됨', 'source' => 'ai'],
         };
     }
 

@@ -111,15 +111,25 @@ JWT_SECRET = 'change-me-to-a-random-32+-char-secret'
 #--------------------------------------------------------------------
 # 슬랙 Incoming Webhook (미설정 시 로그로 대체)
 # slack.webhookUrl =
-# 부정사용 감지가 읽을 frontApi 사용 로그 경로(미설정 시 writable/logs/raw)
-# abuse.rawLogPath =
+# 부정사용 감지(규칙+AI)가 읽을 frontApi 사용 로그 경로.
+# ⚠️ frontApi 는 사용 로그를 자신의 var/logs/raw 에 남긴다(RAW_LOG_PATH). 두 앱이 다른 경로를
+#    쓰면 license:daily 가 raw 파일을 못 찾아 탐지가 조용히 무동작한다. 배포 시 이 값을 frontApi
+#    의 raw 로그 디렉토리로 맞추거나, 두 앱이 같은 경로를 공유하도록 구성할 것.
+# abuse.rawLogPath = /path/to/frontapi/var/logs/raw
 
 #--------------------------------------------------------------------
-# AI (Anthropic) 연동 — 수집 로그 자동 분류·요약 등
+# AI 연동 — 수집 로그 분류·요약, 부정사용 이상 탐지 등
 #--------------------------------------------------------------------
-# 미설정 시 AI 기능은 안전하게 비활성(no-op) — ai:classify-logs 배치가 처리 0건으로 통과.
+# 제공자 선택: anthropic | groq (기본 anthropic). 해당 키 미설정 시 안전하게 no-op.
+# AI_PROVIDER = anthropic
+
+# Anthropic (Claude)
 # ANTHROPIC_API_KEY =
 # ai.baseURL = https://api.anthropic.com
+
+# Groq (OpenAI 호환)
+# GROQ_API_KEY =
+# groq.baseURL = https://api.groq.com
 
 #--------------------------------------------------------------------
 # 기능별 선택
