@@ -599,15 +599,15 @@ cd frontapi && composer check      # frontapi(pure PHP) — analyse + test
 
 ## CD (배포)
 
-> ⚠️ **현재 자동 CD 는 구축되어 있지 않다.** `.github/workflows/` 에는 `ci.yml` 만 존재하며 `deploy.yml` 은 아직 없다. 따라서 `main` push(= `dev → main` PR 머지)로는 **CI 검증만 실행되고 실제 서버 반영은 일어나지 않는다.** 배포는 아래 절차를 **수동으로 실행**해야 한다.
+`main` push(= `dev → main` PR 머지) 시 프로덕션 서버로 **SSH 자동 배포**된다. 정의: `.github/workflows/deploy.yml` (`appleboy/ssh-action`).
 
-아래는 향후 `deploy.yml` 로 자동화할 목표 절차이자, 그때까지 사용하는 **수동 배포 런북**이다.
+> ⚠️ **동작 전제**: 아래 GitHub Secrets(`production` 환경)와 서버 사전 준비가 끝나야 실제 배포가 성공한다. Secrets 미설정 상태에서는 잡이 실패한다. 롤백·재배포는 `workflow_dispatch`(수동 실행)에서 `ref` 를 지정한다.
 
-- **자동화 목표 트리거**: `main` push + `workflow_dispatch`(수동·롤백)
-- **동시성(목표)**: `deploy-production` 그룹 — 배포 동시 실행 1개, `cancel-in-progress: false`
-- **대상**: Ubuntu + mod_php 아파치 단일 서버 (자동화 시 appleboy/ssh-action)
+- **트리거**: `main` push + `workflow_dispatch`(수동·롤백, `ref` 입력)
+- **동시성**: `deploy-production` 그룹 — 배포 동시 실행 1개, `cancel-in-progress: false`
+- **대상**: Ubuntu + mod_php 아파치 단일 서버 (`appleboy/ssh-action`)
 
-### 배포 절차 (서버에 SSH 접속해 순서대로 실행 — 현재는 수동)
+### 배포 절차 (`deploy.yml` 이 SSH 로 서버에서 자동 실행 — 수동 실행 시 동일 순서)
 
 1. `git reset --hard origin/main` — 최신 main 반영
 2. `writable/` 디렉토리 생성 — **반드시 composer/migrate 이전** (없으면 spark 부팅 실패 `WRITEPATH is not set correctly`)
