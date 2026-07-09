@@ -134,4 +134,12 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('data', 'Admin\AuditLogController::data');
         $routes->get('(:num)', 'Admin\AuditLogController::show/$1');
     });
+
+    // 문의관리 — 운영자 전용
+    $routes->group('inquiries', ['filter' => 'adminAuth:operator'], static function (RouteCollection $routes): void {
+        $routes->get('/', 'Admin\InquiryController::index');
+        $routes->get('data', 'Admin\InquiryController::data');
+        $routes->get('(:num)', 'Admin\InquiryController::show/$1');
+        $routes->post('(:num)/reply', 'Admin\InquiryController::reply/$1');
+    });
 });

@@ -88,6 +88,7 @@ AILicet 은 성형·토탈 광고 솔루션(AIvance 제품군)을 위한 **라�
 - **공용 AI 클라이언트(멀티 제공자)** — `AiClient` 인터페이스 + `AnthropicAiClient`(Claude Messages API) + `GroqAiClient`(OpenAI 호환) + `NullAiClient`(no-op). `Services::aiClient()`가 `AI_PROVIDER`(anthropic|groq)로 제공자를 선택하고, 해당 키 미설정 시 no-op → 키 없이도 파이프라인·테스트가 안전하게 동작. 서비스는 구체 모델명 대신 `AiModelTier`(Cheap/Reasoning)를 넘기고 각 클라이언트가 제공자별 모델로 매핑. 프롬프트·파싱은 Service 책임 → 후속 서브이슈가 재사용
 - **수집 로그 자동 분류·요약**(#66 1순위) — `logs:consume`이 저장한 로그를 별도 배치 `ai:classify-logs`(5분 주기)가 미분류분만 골라 저비용 등급으로 카테고리(`LogCategory` 화이트리스트)·요약을 채워 넣는다. `ai_processed_at` 마커로 재분류 방지 겸 개별 실패 자동 재시도
 - **부정사용 이상 탐지 보강**(#80) — 규칙 기반 `AbuseDetectionService`가 못 잡는 행동 패턴 이상을, `AiAbuseDetectionService`가 사용 로그를 라이선스별 일일 집계(고유 호스트·IP 수, 사용 빈도, 시간대)해 추론 등급으로 판단한다. 이상 건은 `audit_logs`에 `ai_anomaly`로 기록되고 `license:daily` 배치에서 운영팀 Slack **초안**으로 통보 — 실제 정지는 운영자가 기존 화면에서 **사람 확정**(human-in-the-loop). 같은 날 재실행 중복은 `existsSince`로 방지
+- **고객 문의 자동 분류·답변 초안**(#81) — 접수된 문의를 배치 `ai:draft-inquiries`(5분 주기)가 미처리분만 골라 **추론 등급 1회 호출**로 분류(`InquiryCategory` 화이트리스트: 결제·기술지원·라이선스·계정·환불·기타)와 답변 초안을 동시에 생성해 `inquiries.ai_category`/`ai_draft_reply`에 채운다. 외부 AI로는 개인정보(email·customer_id)를 제외한 제목·본문만 전송(PII 최소화). 운영자는 `/admin/inquiries`에서 초안을 검토·수정해 **발송 확정**(`reply` 저장 + `status=answered`) — AI는 초안까지, 실제 발송은 **사람 확정**(human-in-the-loop). `ai_processed_at` 마커로 재처리 방지 겸 개별 실패는 `MAX_ATTEMPTS`(5회) 초과 시 dead-letter 격리
 - AI 실제 호출 검증은 후속(현재 인터페이스·파이프라인·스텁 완성, 미설정 시 no-op)
 
 ---
