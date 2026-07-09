@@ -61,7 +61,10 @@ php spark swagger:generate    # OpenAPI 스펙 생성 (public/swagger.json)
 php spark routes              # 라우트 목록
 composer test                 # PHPUnit 단독 실행
 composer analyse              # PHPStan 단독 실행
+composer cs                   # php-cs-fixer 스타일 검사 (dry-run·diff)
+composer cs-fix               # php-cs-fixer 스타일 자동 수정
 composer check                # PHPStan + PHPUnit 순차 실행
+composer ci                   # CS Fixer + PHPStan + PHPUnit (CI backend 잡과 동일)
 ```
 
 ## 디렉토리 규칙
@@ -346,8 +349,8 @@ feature/* → (PR) → dev → (PR) → main
 - `main`과 `dev`에 직접 push 금지
 
 > ⚠️ **`dev → main` 배포 PR 을 Squash 로 머지하면 안 된다.** Squash 는 `dev` 커밋들을
-> 새 커밋 하나로 눌러 `main` 을 `dev` 의 조상에서 이탈시킨다. 그러면 다음 배포마다
-> `deploy.yml` 등에서 3-way 충돌이 재발한다. **반드시 merge commit** 으로 머지해
+> 새 커밋 하나로 눌러 `main` 을 `dev` 의 조상에서 이탈시킨다. 그러면 이후 `main`↔`dev`
+> 동기화·배포마다 3-way 충돌이 재발한다. **반드시 merge commit** 으로 머지해
 > `main` 이 `dev` 의 조상으로 유지되게 한다(배포 = fast-forward → 무충돌).
 
 ### 기능 개발 시작
@@ -494,6 +497,7 @@ class ProcessLogQueue extends BaseCommand
 ```bash
 composer analyse          # PHPStan 단독 실행
 composer check            # PHPStan + PHPUnit 순차 실행
+composer ci               # CS Fixer + PHPStan + PHPUnit (푸시 전 권장)
 ```
 
 - 분석 레벨: **6** (`phpstan.neon`)
@@ -550,83 +554,60 @@ EOF
 - **무료 범위**: 정의 이동·참조 찾기·자동완성·심볼 검색 (충분)
 - **프리미엄($25/년)**: 워크스페이스 전역 rename·고급 리팩토링
 
-### Dart/Flutter LSP (`app-mobile/`)
-
-`app-mobile/` Flutter 코드용 LSP. Dart SDK 에 언어 서버가 내장되어 **별도 설치가 없다**(플러그인 파일만 만들면 된다). PHP 쪽과 동일한 방식이며, 정의 이동·참조 찾기·call hierarchy·code action 을 제공한다.
-
-```bash
-mkdir -p ~/.claude/skills/dart-lsp/.claude-plugin
-
-cat > ~/.claude/skills/dart-lsp/.claude-plugin/plugin.json << 'EOF'
-{
-  "name": "dart-lsp",
-  "description": "Dart/Flutter 언어 서버 (analysis server)",
-  "version": "1.0.0"
-}
-EOF
-
-cat > ~/.claude/skills/dart-lsp/.lsp.json << 'EOF'
-{
-  "dart": {
-    "command": "dart",
-    "args": ["language-server", "--protocol=lsp"],
-    "extensionToLanguage": { ".dart": "dart" }
-  }
-}
-EOF
-```
-
-- **활성화·확인**: PHP LSP 와 동일 (`/reload-plugins` → `/help` 에 `dart-lsp` 표시)
-- **동작 점검**: `--protocol=lsp` 모드의 `initialize` 응답으로 확인
-
 ## CI (GitHub Actions)
 
-`dev` · `main` 으로의 **push / PR** 마다 자동 검증된다. 정의: `.github/workflows/ci.yml` (단일 파일, 두 잡 병렬).
+`dev` · `main` 으로의 **push / PR** 마다 자동 검증된다. 정의: `.github/workflows/ci.yml` (단일 파일, `backend`·`frontapi` 두 잡 병렬). 각 잡은 자체 `mysql:8.0` 서비스 컨테이너를 띄운다.
 
 - **동시성**: 같은 ref 새 푸시 시 진행 중 실행 취소 (`concurrency.cancel-in-progress`)
 
-### `backend` 잡 — PHP 8.5 · PHPStan · PHPUnit
+### `backend` 잡 — PHP 8.5 · CS Fixer · PHPStan · PHPUnit
 
-`mysql:8.0` 서비스 컨테이너를 띄우고 다음 순서로 검증한다.
+루트 CI4 프로젝트를 검증한다. 다음 순서로 실행한다.
 
 1. setup-php `8.5` (확장: `mbstring intl mysqli curl dom xml tokenizer`, 커버리지 `pcov`)
    - `phpunit.dist.xml` 이 `failOnWarning` + `<coverage>` 를 켜 두어 커버리지 드라이버 없으면 경고→실패 → `pcov` 필수
 2. Composer 캐시 → `composer install`
-3. `env` → `.env` 복사 후 CI용 DB·`JWT_SECRET` 주입
-4. `writable/` 하위 디렉토리 생성 (git 미추적, `WRITEPATH` 보장)
-5. `composer analyse` (PHPStan level 6)
-6. MySQL 헬스 대기 → `phpunit.dist.xml` 의 `database.tests.hostname` 을 `localhost` → `127.0.0.1` 로 sed 치환 (MySQLi TCP 강제)
-7. `composer test` (PHPUnit 단위·DB 통합)
+3. `composer cs` (php-cs-fixer `--dry-run` 스타일 검사)
+4. `env` → `.env` 복사 후 CI용 DB·`JWT_SECRET` 주입
+5. `writable/` 하위 디렉토리 생성 (git 미추적, `WRITEPATH` 보장)
+6. `composer analyse` (PHPStan level 6)
+7. MySQL 헬스 대기 → `phpunit.dist.xml` 의 `database.tests.hostname` 을 `localhost` → `127.0.0.1` 로 sed 치환 (MySQLi TCP 강제)
+8. `composer test` (PHPUnit 단위·DB 통합)
 
-### `app` 잡 — Flutter · analyze · test
+### `frontapi` 잡 — pure PHP · PHPStan · PHPUnit
 
-`app-mobile/` 작업 디렉토리에서 실행한다.
+`frontapi/` 작업 디렉토리(클라이언트 프로그램용 라이선스 인증 API, 순수 PHP·CI4 미사용)를 검증한다.
 
-1. Flutter stable 채널 설치 → `flutter pub get`
-2. `dart format --set-exit-if-changed lib test` (포맷 검사)
-3. `flutter analyze`
-4. `flutter test`
+1. setup-php `8.5` (확장: `mbstring intl pdo_mysql curl dom xml tokenizer`)
+2. `composer install`
+3. `composer analyse` (PHPStan level 6)
+4. MySQL 헬스 대기
+5. `composer test` (PHPUnit — DB 접속정보는 `DB_*` env 로 주입)
 
 ### 푸시 전 로컬 사전 검증
 
 CI 실패를 줄이기 위해 푸시 전 동일 검증을 로컬에서 수행한다.
 
 ```bash
-composer check   # = analyse + test (백엔드)
-# 앱: cd app-mobile && dart format --output=none --set-exit-if-changed lib test && flutter analyze && flutter test
+composer ci                        # = CS Fixer + analyse + test (루트 백엔드) — CI backend 잡과 동일 순서
+cd frontapi && composer check      # frontapi(pure PHP) — analyse + test
 ```
+
+> ⚠️ `composer check`(analyse+test)는 **CS Fixer를 포함하지 않아** 스타일 위반을 놓친다. CI backend 잡은 CS Fixer도 검사하므로, 푸시 전에는 반드시 `composer ci`를 쓴다. CS 위반은 `composer cs-fix`로 자동 수정 후 커밋한다.
 
 > 새 PHP 코드는 PHPStan level 6 통과 + 관련 PHPUnit 테스트가 그린이어야 CI를 통과한다. 새 기능에는 `tests/` 테스트를 함께 작성한다.
 
 ## CD (배포)
 
-`main` push(= `dev → main` PR 머지) 시 프로덕션 서버로 **SSH 자동 배포**된다. 정의: `.github/workflows/deploy.yml`.
+> ⚠️ **현재 자동 CD 는 구축되어 있지 않다.** `.github/workflows/` 에는 `ci.yml` 만 존재하며 `deploy.yml` 은 아직 없다. 따라서 `main` push(= `dev → main` PR 머지)로는 **CI 검증만 실행되고 실제 서버 반영은 일어나지 않는다.** 배포는 아래 절차를 **수동으로 실행**해야 한다.
 
-- **트리거**: `main` push + `workflow_dispatch`(수동·롤백)
-- **동시성**: `deploy-production` 그룹 — 배포 동시 실행 1개, `cancel-in-progress: false`
-- **대상**: Ubuntu + mod_php 아파치 단일 서버 (appleboy/ssh-action)
+아래는 향후 `deploy.yml` 로 자동화할 목표 절차이자, 그때까지 사용하는 **수동 배포 런북**이다.
 
-### 배포 절차 (서버 SSH 실행)
+- **자동화 목표 트리거**: `main` push + `workflow_dispatch`(수동·롤백)
+- **동시성(목표)**: `deploy-production` 그룹 — 배포 동시 실행 1개, `cancel-in-progress: false`
+- **대상**: Ubuntu + mod_php 아파치 단일 서버 (자동화 시 appleboy/ssh-action)
+
+### 배포 절차 (서버에 SSH 접속해 순서대로 실행 — 현재는 수동)
 
 1. `git reset --hard origin/main` — 최신 main 반영
 2. `writable/` 디렉토리 생성 — **반드시 composer/migrate 이전** (없으면 spark 부팅 실패 `WRITEPATH is not set correctly`)
@@ -639,7 +620,9 @@ composer check   # = analyse + test (백엔드)
 
 > **writable chmod 함정**: 런타임에 아파치(`www-data`)가 만든 `writable/cache`·`session` 파일은 배포 계정 소유가 아니라 `chmod -R 775 writable` 가 `Operation not permitted` 로 실패한다. `set -e` 로 배포가 중단되지 않도록 이 `chmod` 는 best-effort(`2>/dev/null || echo …`)로 처리한다. 근본 해결은 아래 서버 준비의 setgid 구성이다.
 
-### 필요한 GitHub Secrets (`production` 환경)
+### 필요한 GitHub Secrets (`production` 환경 — 자동화 시)
+
+`deploy.yml` 도입 시 아래 Secrets 가 필요하다(수동 배포에는 불필요).
 
 `DEPLOY_HOST` · `DEPLOY_USER` · `DEPLOY_SSH_KEY` · `DEPLOY_PORT` · `DEPLOY_PATH`
 
