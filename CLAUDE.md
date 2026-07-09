@@ -554,35 +554,6 @@ EOF
 - **무료 범위**: 정의 이동·참조 찾기·자동완성·심볼 검색 (충분)
 - **프리미엄($25/년)**: 워크스페이스 전역 rename·고급 리팩토링
 
-### Dart/Flutter LSP (`app-mobile/`)
-
-`app-mobile/` Flutter 코드용 LSP. Dart SDK 에 언어 서버가 내장되어 **별도 설치가 없다**(플러그인 파일만 만들면 된다). PHP 쪽과 동일한 방식이며, 정의 이동·참조 찾기·call hierarchy·code action 을 제공한다.
-
-```bash
-mkdir -p ~/.claude/skills/dart-lsp/.claude-plugin
-
-cat > ~/.claude/skills/dart-lsp/.claude-plugin/plugin.json << 'EOF'
-{
-  "name": "dart-lsp",
-  "description": "Dart/Flutter 언어 서버 (analysis server)",
-  "version": "1.0.0"
-}
-EOF
-
-cat > ~/.claude/skills/dart-lsp/.lsp.json << 'EOF'
-{
-  "dart": {
-    "command": "dart",
-    "args": ["language-server", "--protocol=lsp"],
-    "extensionToLanguage": { ".dart": "dart" }
-  }
-}
-EOF
-```
-
-- **활성화·확인**: PHP LSP 와 동일 (`/reload-plugins` → `/help` 에 `dart-lsp` 표시)
-- **동작 점검**: `--protocol=lsp` 모드의 `initialize` 응답으로 확인
-
 ## CI (GitHub Actions)
 
 `dev` · `main` 으로의 **push / PR** 마다 자동 검증된다. 정의: `.github/workflows/ci.yml` (단일 파일, `backend`·`frontapi` 두 잡 병렬). 각 잡은 자체 `mysql:8.0` 서비스 컨테이너를 띄운다.
