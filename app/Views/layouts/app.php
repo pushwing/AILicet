@@ -26,6 +26,7 @@ $menus = match ($role) {
         ['key' => 'licenses',      'label' => '라이센스', 'icon' => '🔑', 'url' => '/admin/licenses'],
         ['key' => 'products',      'label' => '상품·모듈', 'icon' => '📦', 'url' => '/admin/products'],
         ['key' => 'audit',         'label' => '감사로그', 'icon' => '🛡', 'url' => '/admin/audit-logs'],
+        ['key' => 'inquiries',     'label' => '문의관리', 'icon' => '💬', 'url' => '/admin/inquiries'],
         ['key' => 'notifications', 'label' => '알림', 'icon' => '🔔', 'url' => '/admin/notifications'],
     ],
     UserRole::Agency => [

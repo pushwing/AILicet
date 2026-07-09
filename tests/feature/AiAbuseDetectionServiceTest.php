@@ -161,4 +161,47 @@ final class AiAbuseDetectionServiceTest extends CIUnitTestCase
         $this->assertSame([], $result);
         $this->dontSeeInDatabase('audit_logs', ['event_type' => AuditEventType::AiAnomaly->value, 'license_key' => 'KEY-BAD']);
     }
+
+    /**
+     * 외부 AI 로 보내는 프롬프트에는 원본 host_id·IP(PII)가 빠지고 집계 수치만 담긴다.
+     * 반면 내부 audit_logs.detail 저장분에는 원본이 보존된다(감사·재처리용).
+     */
+    public function testExternalPromptMasksRawHostsAndIps(): void
+    {
+        $id = $this->seedIssuedKey('KEY-PII');
+
+        // complete() 에 전달된 프롬프트를 캡처하는 가짜 AiClient
+        $capturingAi = new class () implements AiClient {
+            public string $lastPrompt = '';
+
+            public function isConfigured(): bool
+            {
+                return true;
+            }
+
+            public function complete(AiModelTier $tier, string $system, string $prompt, int $maxTokens = 1024): string
+            {
+                $this->lastPrompt = $prompt;
+
+                return '{"anomalous":true,"severity":"high","reason":"키 공유 의심"}';
+            }
+        };
+
+        (new AiAbuseDetectionService($capturingAi))->detect($this->usageEntries('KEY-PII'));
+
+        // 외부 전송분: 원본 host_id·IP 문자열은 빠지고, 집계 수치는 포함
+        $this->assertStringNotContainsString('H1', $capturingAi->lastPrompt);
+        $this->assertStringNotContainsString('1.1.1.1', $capturingAi->lastPrompt);
+        $this->assertStringContainsString('distinct_hosts', $capturingAi->lastPrompt);
+        $this->assertStringContainsString('distinct_ips', $capturingAi->lastPrompt);
+
+        // 내부 저장분: 원본 유지(감사용)
+        $row = model(AuditLogModel::class)
+            ->where('event_type', AuditEventType::AiAnomaly->value)
+            ->where('license_key', 'KEY-PII')
+            ->first();
+        $this->assertIsArray($row);
+        $this->assertSame($id, (int) $row['license_id']);
+        $this->assertStringContainsString('1.1.1.1', (string) $row['detail']);
+    }
 }

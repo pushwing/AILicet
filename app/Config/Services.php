@@ -28,6 +28,8 @@ use App\Services\ClientSignupService;
 use App\Services\CustomerService;
 use App\Services\DashboardService;
 use App\Services\FloatingLicenseService;
+use App\Services\InquiryClassificationService;
+use App\Services\InquiryService;
 use App\Services\LicenseExpiryService;
 use App\Services\LicenseLifecycleService;
 use App\Services\LicensePolicyValidator;
@@ -412,6 +414,30 @@ class Services extends BaseService
         }
 
         return new AiAbuseDetectionService(static::aiClient());
+    }
+
+    /**
+     * 고객 문의 AI 자동 분류·답변 초안 서비스.
+     */
+    public static function inquiryClassificationService(bool $getShared = true): InquiryClassificationService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('inquiryClassificationService');
+        }
+
+        return new InquiryClassificationService(static::aiClient());
+    }
+
+    /**
+     * 고객 문의 운영(Admin) 서비스 — 목록·상세·답변 확정.
+     */
+    public static function inquiryService(bool $getShared = true): InquiryService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('inquiryService');
+        }
+
+        return new InquiryService();
     }
 
     /**
