@@ -61,7 +61,10 @@ php spark swagger:generate    # OpenAPI 스펙 생성 (public/swagger.json)
 php spark routes              # 라우트 목록
 composer test                 # PHPUnit 단독 실행
 composer analyse              # PHPStan 단독 실행
+composer cs                   # php-cs-fixer 스타일 검사 (dry-run·diff)
+composer cs-fix               # php-cs-fixer 스타일 자동 수정
 composer check                # PHPStan + PHPUnit 순차 실행
+composer ci                   # CS Fixer + PHPStan + PHPUnit (CI backend 잡과 동일)
 ```
 
 ## 디렉토리 규칙
@@ -346,8 +349,8 @@ feature/* → (PR) → dev → (PR) → main
 - `main`과 `dev`에 직접 push 금지
 
 > ⚠️ **`dev → main` 배포 PR 을 Squash 로 머지하면 안 된다.** Squash 는 `dev` 커밋들을
-> 새 커밋 하나로 눌러 `main` 을 `dev` 의 조상에서 이탈시킨다. 그러면 다음 배포마다
-> `deploy.yml` 등에서 3-way 충돌이 재발한다. **반드시 merge commit** 으로 머지해
+> 새 커밋 하나로 눌러 `main` 을 `dev` 의 조상에서 이탈시킨다. 그러면 이후 `main`↔`dev`
+> 동기화·배포마다 3-way 충돌이 재발한다. **반드시 merge commit** 으로 머지해
 > `main` 이 `dev` 의 조상으로 유지되게 한다(배포 = fast-forward → 무충돌).
 
 ### 기능 개발 시작
@@ -620,13 +623,15 @@ composer check   # = analyse + test (백엔드)
 
 ## CD (배포)
 
-`main` push(= `dev → main` PR 머지) 시 프로덕션 서버로 **SSH 자동 배포**된다. 정의: `.github/workflows/deploy.yml`.
+> ⚠️ **현재 자동 CD 는 구축되어 있지 않다.** `.github/workflows/` 에는 `ci.yml` 만 존재하며 `deploy.yml` 은 아직 없다. 따라서 `main` push(= `dev → main` PR 머지)로는 **CI 검증만 실행되고 실제 서버 반영은 일어나지 않는다.** 배포는 아래 절차를 **수동으로 실행**해야 한다.
 
-- **트리거**: `main` push + `workflow_dispatch`(수동·롤백)
-- **동시성**: `deploy-production` 그룹 — 배포 동시 실행 1개, `cancel-in-progress: false`
-- **대상**: Ubuntu + mod_php 아파치 단일 서버 (appleboy/ssh-action)
+아래는 향후 `deploy.yml` 로 자동화할 목표 절차이자, 그때까지 사용하는 **수동 배포 런북**이다.
 
-### 배포 절차 (서버 SSH 실행)
+- **자동화 목표 트리거**: `main` push + `workflow_dispatch`(수동·롤백)
+- **동시성(목표)**: `deploy-production` 그룹 — 배포 동시 실행 1개, `cancel-in-progress: false`
+- **대상**: Ubuntu + mod_php 아파치 단일 서버 (자동화 시 appleboy/ssh-action)
+
+### 배포 절차 (서버에 SSH 접속해 순서대로 실행 — 현재는 수동)
 
 1. `git reset --hard origin/main` — 최신 main 반영
 2. `writable/` 디렉토리 생성 — **반드시 composer/migrate 이전** (없으면 spark 부팅 실패 `WRITEPATH is not set correctly`)
@@ -639,7 +644,9 @@ composer check   # = analyse + test (백엔드)
 
 > **writable chmod 함정**: 런타임에 아파치(`www-data`)가 만든 `writable/cache`·`session` 파일은 배포 계정 소유가 아니라 `chmod -R 775 writable` 가 `Operation not permitted` 로 실패한다. `set -e` 로 배포가 중단되지 않도록 이 `chmod` 는 best-effort(`2>/dev/null || echo …`)로 처리한다. 근본 해결은 아래 서버 준비의 setgid 구성이다.
 
-### 필요한 GitHub Secrets (`production` 환경)
+### 필요한 GitHub Secrets (`production` 환경 — 자동화 시)
+
+`deploy.yml` 도입 시 아래 Secrets 가 필요하다(수동 배포에는 불필요).
 
 `DEPLOY_HOST` · `DEPLOY_USER` · `DEPLOY_SSH_KEY` · `DEPLOY_PORT` · `DEPLOY_PATH`
 
