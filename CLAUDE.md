@@ -585,39 +585,41 @@ EOF
 
 ## CI (GitHub Actions)
 
-`dev` · `main` 으로의 **push / PR** 마다 자동 검증된다. 정의: `.github/workflows/ci.yml` (단일 파일, 두 잡 병렬).
+`dev` · `main` 으로의 **push / PR** 마다 자동 검증된다. 정의: `.github/workflows/ci.yml` (단일 파일, `backend`·`frontapi` 두 잡 병렬). 각 잡은 자체 `mysql:8.0` 서비스 컨테이너를 띄운다.
 
 - **동시성**: 같은 ref 새 푸시 시 진행 중 실행 취소 (`concurrency.cancel-in-progress`)
 
-### `backend` 잡 — PHP 8.5 · PHPStan · PHPUnit
+### `backend` 잡 — PHP 8.5 · CS Fixer · PHPStan · PHPUnit
 
-`mysql:8.0` 서비스 컨테이너를 띄우고 다음 순서로 검증한다.
+루트 CI4 프로젝트를 검증한다. 다음 순서로 실행한다.
 
 1. setup-php `8.5` (확장: `mbstring intl mysqli curl dom xml tokenizer`, 커버리지 `pcov`)
    - `phpunit.dist.xml` 이 `failOnWarning` + `<coverage>` 를 켜 두어 커버리지 드라이버 없으면 경고→실패 → `pcov` 필수
 2. Composer 캐시 → `composer install`
-3. `env` → `.env` 복사 후 CI용 DB·`JWT_SECRET` 주입
-4. `writable/` 하위 디렉토리 생성 (git 미추적, `WRITEPATH` 보장)
-5. `composer analyse` (PHPStan level 6)
-6. MySQL 헬스 대기 → `phpunit.dist.xml` 의 `database.tests.hostname` 을 `localhost` → `127.0.0.1` 로 sed 치환 (MySQLi TCP 강제)
-7. `composer test` (PHPUnit 단위·DB 통합)
+3. `composer cs` (php-cs-fixer `--dry-run` 스타일 검사)
+4. `env` → `.env` 복사 후 CI용 DB·`JWT_SECRET` 주입
+5. `writable/` 하위 디렉토리 생성 (git 미추적, `WRITEPATH` 보장)
+6. `composer analyse` (PHPStan level 6)
+7. MySQL 헬스 대기 → `phpunit.dist.xml` 의 `database.tests.hostname` 을 `localhost` → `127.0.0.1` 로 sed 치환 (MySQLi TCP 강제)
+8. `composer test` (PHPUnit 단위·DB 통합)
 
-### `app` 잡 — Flutter · analyze · test
+### `frontapi` 잡 — pure PHP · PHPStan · PHPUnit
 
-`app-mobile/` 작업 디렉토리에서 실행한다.
+`frontapi/` 작업 디렉토리(클라이언트 프로그램용 라이선스 인증 API, 순수 PHP·CI4 미사용)를 검증한다.
 
-1. Flutter stable 채널 설치 → `flutter pub get`
-2. `dart format --set-exit-if-changed lib test` (포맷 검사)
-3. `flutter analyze`
-4. `flutter test`
+1. setup-php `8.5` (확장: `mbstring intl pdo_mysql curl dom xml tokenizer`)
+2. `composer install`
+3. `composer analyse` (PHPStan level 6)
+4. MySQL 헬스 대기
+5. `composer test` (PHPUnit — DB 접속정보는 `DB_*` env 로 주입)
 
 ### 푸시 전 로컬 사전 검증
 
 CI 실패를 줄이기 위해 푸시 전 동일 검증을 로컬에서 수행한다.
 
 ```bash
-composer ci      # = CS Fixer + analyse + test (백엔드) — CI backend 잡과 동일 순서
-# 앱: cd app-mobile && dart format --output=none --set-exit-if-changed lib test && flutter analyze && flutter test
+composer ci                        # = CS Fixer + analyse + test (루트 백엔드) — CI backend 잡과 동일 순서
+cd frontapi && composer check      # frontapi(pure PHP) — analyse + test
 ```
 
 > ⚠️ `composer check`(analyse+test)는 **CS Fixer를 포함하지 않아** 스타일 위반을 놓친다. CI backend 잡은 CS Fixer도 검사하므로, 푸시 전에는 반드시 `composer ci`를 쓴다. CS 위반은 `composer cs-fix`로 자동 수정 후 커밋한다.
