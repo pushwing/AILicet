@@ -46,6 +46,11 @@
         "check": [
             "@analyse",
             "@test"
+        ],
+        "ci": [
+            "@cs",
+            "@analyse",
+            "@test"
         ]
     }
 }
