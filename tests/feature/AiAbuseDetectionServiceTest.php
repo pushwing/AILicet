@@ -171,7 +171,7 @@ final class AiAbuseDetectionServiceTest extends CIUnitTestCase
         $id = $this->seedIssuedKey('KEY-PII');
 
         // complete() 에 전달된 프롬프트를 캡처하는 가짜 AiClient
-        $capturingAi = new class implements AiClient {
+        $capturingAi = new class () implements AiClient {
             public string $lastPrompt = '';
 
             public function isConfigured(): bool
