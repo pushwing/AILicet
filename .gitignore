@@ -139,3 +139,6 @@ _modules/*
 # 런타임 산출물
 /var/
 /frontapi/public/var/
+
+# Claude Code — 개인 로컬 설정은 공유하지 않음(에이전트 정의 .claude/agents/ 는 추적)
+/.claude/settings.local.json

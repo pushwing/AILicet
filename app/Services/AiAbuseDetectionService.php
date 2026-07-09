@@ -48,12 +48,17 @@ final class AiAbuseDetectionService
         $detected = [];
         $analyzed = 0;
 
-        foreach ($this->aggregate($entries) as $key => $stats) {
+        $aggregated = $this->aggregate($entries);
+        // 집계된 모든 키의 license_id 를 단일 배치 쿼리로 선해석(N+1 방지).
+        // 알 수 없는 키는 매핑에서 빠지므로, 키별 개별 조회로 인한 무제한 쿼리가 발생하지 않는다.
+        $idMap = model(LicenseHistoryModel::class)->licenseIdsByKeys(array_keys($aggregated));
+
+        foreach ($aggregated as $key => $stats) {
             if ($analyzed >= $maxLicenses) {
                 break;
             }
 
-            $licenseId = model(LicenseHistoryModel::class)->licenseIdByKey($key);
+            $licenseId = $idMap[$key] ?? null;
             if ($licenseId === null) {
                 continue; // 알 수 없는 키는 규칙 기반 탐지 소관
             }
