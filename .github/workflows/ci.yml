@@ -50,6 +50,9 @@ jobs:
       - name: 의존성 설치
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      - name: 코드 스타일 (php-cs-fixer)
+        run: composer cs
+
       - name: .env 구성 (CI용 DB · JWT)
         run: |
           cp env .env

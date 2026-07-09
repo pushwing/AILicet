@@ -126,9 +126,12 @@ final class AgencyServiceTest extends CIUnitTestCase
         $a  = $this->seedAgency(100, '알파');
         $id = $this->service->createClient($a, new CustomerRequest(
             customerType: 'agency', // 무시되고 client 로 강제
-            companyName: '신규고객', name: '홍', email: 'new@n.com',
+            companyName: '신규고객',
+            name: '홍',
+            email: 'new@n.com',
             parentId: 99999, // 무시되고 대행사로 강제
-            phone: null, isActive: true,
+            phone: null,
+            isActive: true,
         ));
 
         $row = model(CustomerModel::class)->find($id);
@@ -144,8 +147,13 @@ final class AgencyServiceTest extends CIUnitTestCase
 
         $this->expectException(RuntimeException::class);
         $this->service->updateClient($a, $cb, new CustomerRequest(
-            customerType: 'client', companyName: 'x', name: 'y', email: 'z@n.com',
-            parentId: null, phone: null, isActive: true,
+            customerType: 'client',
+            companyName: 'x',
+            name: 'y',
+            email: 'z@n.com',
+            parentId: null,
+            phone: null,
+            isActive: true,
         ));
     }
 }

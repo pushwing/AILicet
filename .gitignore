@@ -132,3 +132,10 @@ _modules/*
 
 /results/
 /phpunit.xml
+
+# php-cs-fixer
+.php-cs-fixer.cache
+
+# 런타임 산출물
+/var/
+/frontapi/public/var/

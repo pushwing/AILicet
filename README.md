@@ -84,6 +84,10 @@ AILicet 은 성형·토탈 광고 솔루션(AIvance 제품군)을 위한 **라�
 - **#17 CRON 배치·알림** — 만료 알림/자동 종료/부정사용 감지 → 슬랙(dead-letter), 스케줄러
 - **#18 로그 파이프라인** — frontApi `POST /logs` → Redis 큐 → CI4 소비자(원시파일+DB), dead-letter
 
+### P8 · AI 업무 효율화 (#66)
+- **공용 AI 클라이언트** — `AiClient` 인터페이스 + `AnthropicAiClient`(Messages API) + `NullAiClient`(no-op). `Services::aiClient()` 조건부 팩토리가 `ANTHROPIC_API_KEY` 유무로 구현을 분기 → 키 없이도 파이프라인·테스트가 안전하게 동작. 프롬프트·파싱은 Service 책임, 클라이언트는 저수준 호출만 → 후속 서브이슈가 재사용
+- **수집 로그 자동 분류·요약**(1순위) — `logs:consume`이 저장한 로그를 별도 배치 `ai:classify-logs`(5분 주기)가 미분류분만 골라 저비용 `claude-haiku-4-5` 로 카테고리(`LogCategory` 화이트리스트)·요약을 채워 넣는다. `ai_processed_at` 마커로 재분류 방지 겸 개별 실패 자동 재시도. AI 실제 호출 검증은 후속(현재 인터페이스·파이프라인·스텁 완성)
+
 ---
 
 ## 로컬 개발
@@ -104,6 +108,13 @@ make serve            # FrankenPHP (포트 8300) — 또는 make serve-spark
 - `JWT_PUBLIC_KEY_PATH` — RS256 검증용 AITessera **공개키(PEM)** 경로. AITessera 의 `jwt:keygen` 으로 생성한 공개키만 배치한다(개인키 금지).
 - `JWT_SECRET` — HS256 검증용 공유 시크릿(전환기 한정, AITessera 서명키와 동일). RS256 단독 전환 후 `JWT_VERIFY_ALGOS=RS256` 으로 좁히면 불필요.
 - `LICENSE_TOKEN_SECRET` — 자체 발급 토큰(플로팅 활성화 등)용 HS256 시크릿. 미설정 시 `JWT_SECRET` 폴백.
+
+**AI 연동(선택)** — 수집 로그 자동 분류·요약 등 AI 기능용. 미설정 시 안전하게 비활성(no-op).
+- `ANTHROPIC_API_KEY` — Anthropic API 키. 설정 시 `ai:classify-logs` 배치가 활성화된다.
+- `ai.baseURL` — 기본 `https://api.anthropic.com`.
+  ```bash
+  php spark ai:classify-logs --limit 100   # 수동 실행(스케줄러는 5분 주기 자동)
+  ```
 
 ### frontApi (pure PHP)
 

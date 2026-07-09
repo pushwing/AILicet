@@ -39,7 +39,7 @@ final class ProductModel extends Model
 
         $this->validationRules = [
             'id'             => 'permit_empty|is_natural_no_zero', // is_unique {id} 플레이스홀더 요건
-            'product_code'   => "required|max_length[30]|is_unique[products.product_code,id,{id}]",
+            'product_code'   => 'required|max_length[30]|is_unique[products.product_code,id,{id}]',
             'name'           => 'required|max_length[100]',
             'description'    => 'permit_empty|max_length[20000]',
             'product_family' => 'permit_empty|max_length[50]',
