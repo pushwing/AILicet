@@ -31,7 +31,9 @@ final class LogsConsume extends BaseCommand
         $max       = is_numeric($maxOption) ? (int) $maxOption : 1000;
         $result    = service('logQueueConsumer')->consume($max > 0 ? $max : 1000);
 
-        CLI::write(sprintf('처리 %d건 / 실패 %d건', $result['processed'], $result['failed']),
-            $result['failed'] > 0 ? 'yellow' : 'green');
+        CLI::write(
+            sprintf('처리 %d건 / 실패 %d건', $result['processed'], $result['failed']),
+            $result['failed'] > 0 ? 'yellow' : 'green'
+        );
     }
 }

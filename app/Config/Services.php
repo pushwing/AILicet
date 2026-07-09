@@ -2,32 +2,44 @@
 
 namespace Config;
 
+use App\Integrations\AiClient;
 use App\Integrations\AitesseraClient;
+use App\Integrations\AnthropicAiClient;
+use App\Integrations\GroqAiClient;
+use App\Integrations\NullAiClient;
+use App\Libraries\HtmlSanitizer;
 use App\Libraries\JwtLibrary;
+use App\Libraries\JwtVerifier;
 use App\Libraries\LicenseSigner;
+use App\Licensing\Storage\LicenseStorageInterface;
+use App\Licensing\Storage\LocalLicenseStorage;
+use App\Licensing\Strategy\LicensePayloadStrategyResolver;
 use App\Notifications\LogNotifier;
 use App\Notifications\Notifier;
 use App\Notifications\SlackNotifier;
 use App\Queue\LogQueue;
 use App\Queue\RedisLogQueue;
 use App\Services\AbuseDetectionService;
-use App\Services\LicenseExpiryService;
-use App\Services\LogQueueConsumer;
-use Predis\Client as Redis;
-use App\Licensing\Storage\LicenseStorageInterface;
-use App\Licensing\Storage\LocalLicenseStorage;
-use App\Licensing\Strategy\LicensePayloadStrategyResolver;
 use App\Services\AgencyService;
+use App\Services\AiAbuseDetectionService;
+use App\Services\AuditLogQueryService;
 use App\Services\ClientService;
 use App\Services\ClientSignupService;
 use App\Services\CustomerService;
+use App\Services\DashboardService;
 use App\Services\FloatingLicenseService;
+use App\Services\LicenseExpiryService;
 use App\Services\LicenseLifecycleService;
-use App\Services\AuditLogQueryService;
+use App\Services\LicensePolicyValidator;
 use App\Services\LicenseQueryService;
+use App\Services\LogClassificationService;
+use App\Services\LogQueueConsumer;
+use App\Services\ModuleService;
 use App\Services\NodeLockLicenseService;
+use App\Services\NotificationService;
 use App\Services\ProductService;
 use CodeIgniter\Config\BaseService;
+use Predis\Client as Redis;
 
 /**
  * Services Configuration file.
@@ -45,15 +57,39 @@ use CodeIgniter\Config\BaseService;
 class Services extends BaseService
 {
     /**
-     * JWT(HS256) 인코더/디코더. 테스트에서 injectMock 으로 시크릿 주입 가능.
+     * AITessera 발급 토큰 검증기. 대칭키(HS256)→비대칭키(RS256) 무중단 전환을 위해
+     * `JWT_VERIFY_ALGOS`(기본 `HS256,RS256`)로 허용 알고리즘을 제어한다. 전환 완료 후
+     * `JWT_VERIFY_ALGOS=RS256` 으로 좁히면 코드 변경 없이 HS256 을 차단한다.
+     *
+     * 테스트에서 injectMock('aitesseraToken', ...) 으로 대체 가능.
      */
-    public static function jwt(bool $getShared = true): JwtLibrary
+    public static function aitesseraToken(bool $getShared = true): JwtVerifier
     {
         if ($getShared) {
-            return static::getSharedInstance('jwt');
+            return static::getSharedInstance('aitesseraToken');
         }
 
-        return new JwtLibrary();
+        return JwtVerifier::fromConfig();
+    }
+
+    /**
+     * AILicet 자체 발급 토큰(플로팅 라이센스 활성화 등)용 HS256 서명기.
+     * 전용 시크릿 `LICENSE_TOKEN_SECRET`, 미설정 시 `JWT_SECRET` 으로 폴백한다.
+     *
+     * 테스트에서 injectMock('licenseToken', ...) 으로 대체 가능.
+     */
+    public static function licenseToken(bool $getShared = true): JwtLibrary
+    {
+        if ($getShared) {
+            return static::getSharedInstance('licenseToken');
+        }
+
+        $secret = (string) env('LICENSE_TOKEN_SECRET');
+        if ($secret === '') {
+            $secret = (string) env('JWT_SECRET');
+        }
+
+        return new JwtLibrary($secret);
     }
 
     /**
@@ -66,6 +102,32 @@ class Services extends BaseService
         }
 
         return new ProductService();
+    }
+
+    /**
+     * 리치 텍스트 HTML 화이트리스트 정화기.
+     *
+     * 테스트에서 injectMock('htmlSanitizer', ...) 으로 대체 가능.
+     */
+    public static function htmlSanitizer(bool $getShared = true): HtmlSanitizer
+    {
+        if ($getShared) {
+            return static::getSharedInstance('htmlSanitizer');
+        }
+
+        return new HtmlSanitizer();
+    }
+
+    /**
+     * 모듈 마스터 서비스.
+     */
+    public static function moduleService(bool $getShared = true): ModuleService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('moduleService');
+        }
+
+        return new ModuleService();
     }
 
     /**
@@ -123,6 +185,18 @@ class Services extends BaseService
     }
 
     /**
+     * 기간정책별 발급 입력 검증·정규화기(노드락·플로팅 공통).
+     */
+    public static function licensePolicyValidator(bool $getShared = true): LicensePolicyValidator
+    {
+        if ($getShared) {
+            return static::getSharedInstance('licensePolicyValidator');
+        }
+
+        return new LicensePolicyValidator();
+    }
+
+    /**
      * 라이센스 생명주기(상태/연장/재발급) 서비스.
      */
     public static function licenseLifecycleService(bool $getShared = true): LicenseLifecycleService
@@ -156,6 +230,18 @@ class Services extends BaseService
         }
 
         return new LicenseQueryService();
+    }
+
+    /**
+     * 대시보드 집계(통계·차트·최근 라이선스) 서비스.
+     */
+    public static function dashboardService(bool $getShared = true): DashboardService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('dashboardService');
+        }
+
+        return new DashboardService();
     }
 
     /**
@@ -224,6 +310,18 @@ class Services extends BaseService
     }
 
     /**
+     * 인앱 메시지(수신함) 서비스.
+     */
+    public static function notificationService(bool $getShared = true): NotificationService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('notificationService');
+        }
+
+        return new NotificationService();
+    }
+
+    /**
      * Redis 클라이언트(predis).
      */
     public static function redis(bool $getShared = true): Redis
@@ -261,6 +359,59 @@ class Services extends BaseService
         }
 
         return new LogQueueConsumer(static::logQueue());
+    }
+
+    /**
+     * AI 클라이언트 — AI_PROVIDER(anthropic|groq)로 제공자를 선택한다.
+     * 해당 제공자 API 키가 있으면 그 클라이언트를, 없으면 NullAiClient(no-op)를 반환한다.
+     *
+     * 테스트에서 injectMock('aiClient', ...) 으로 대체 가능.
+     */
+    public static function aiClient(bool $getShared = true): AiClient
+    {
+        if ($getShared) {
+            return static::getSharedInstance('aiClient');
+        }
+
+        $provider = strtolower((string) (env('AI_PROVIDER') ?: 'anthropic'));
+
+        if ($provider === 'groq') {
+            $key = (string) env('GROQ_API_KEY');
+
+            return $key === ''
+                ? new NullAiClient()
+                : new GroqAiClient($key, (string) (env('groq.baseURL') ?: 'https://api.groq.com'));
+        }
+
+        $key = (string) env('ANTHROPIC_API_KEY');
+
+        return $key === ''
+            ? new NullAiClient()
+            : new AnthropicAiClient($key, (string) (env('ai.baseURL') ?: 'https://api.anthropic.com'));
+    }
+
+    /**
+     * 수집 로그 AI 자동 분류·요약 서비스.
+     */
+    public static function logClassificationService(bool $getShared = true): LogClassificationService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('logClassificationService');
+        }
+
+        return new LogClassificationService(static::aiClient());
+    }
+
+    /**
+     * AI 부정사용 이상 탐지(보강) 서비스.
+     */
+    public static function aiAbuseDetectionService(bool $getShared = true): AiAbuseDetectionService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('aiAbuseDetectionService');
+        }
+
+        return new AiAbuseDetectionService(static::aiClient());
     }
 
     /**

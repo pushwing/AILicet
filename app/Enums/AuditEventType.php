@@ -16,6 +16,7 @@ enum AuditEventType: string
     case RevokedKeyUse       = 'revoked_key_use';       // 재발급 후 이전(폐기) 키 사용
     case DuplicateActivation = 'duplicate_activation';  // 플로팅 이중 활성화 시도
     case UsageOverLimit      = 'usage_over_limit';      // 카운트/크레딧 초과 사용
+    case AiAnomaly           = 'ai_anomaly';            // AI 행동 이상 탐지(초안 — 사람 확정 필요)
 
     public function label(): string
     {
@@ -25,6 +26,7 @@ enum AuditEventType: string
             self::RevokedKeyUse       => '폐기 키 사용',
             self::DuplicateActivation => '이중 활성화',
             self::UsageOverLimit      => '사용량 초과',
+            self::AiAnomaly           => 'AI 이상 탐지',
         };
     }
 }

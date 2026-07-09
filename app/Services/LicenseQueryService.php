@@ -7,6 +7,8 @@ namespace App\Services;
 use App\Models\CustomerModel;
 use App\Models\LicenseHistoryModel;
 use App\Models\LicenseModel;
+use App\Models\ProductModel;
+use App\Models\ProductModuleModel;
 
 /**
  * 라이센스 조회(읽기) 유스케이스 — 관리 화면 목록·상세.
@@ -60,9 +62,13 @@ final class LicenseQueryService
     }
 
     /**
-     * 라이센스 상세 — 상품·고객·이력 포함.
+     * 라이센스 상세 — 상품·모듈·고객·이력 포함.
      *
-     * @return array{license: array<string, mixed>, product: array<string, mixed>|null, customers: list<array<string, mixed>>, history: list<array<string, mixed>>, current_key: ?string}|null
+     * productModules 는 상품이 보유한 전체 모듈(code/name), licenseModules 는
+     * 이 라이센스 발급 시 실제 선택된 모듈 코드(config.modules 스냅샷)다.
+     * 뷰는 두 목록을 대조해 발급/미발급 모듈을 구분 표시한다.
+     *
+     * @return array{license: array<string, mixed>, product: array<string, mixed>|null, productModules: list<array{id:int, product_id:int, code:string, name:string}>, licenseModules: list<string>, limits: array<string, int>, customers: list<array<string, mixed>>, history: list<array<string, mixed>>, current_key: ?string}|null
      */
     public function detail(int $id): ?array
     {
@@ -72,8 +78,19 @@ final class LicenseQueryService
             return null;
         }
 
+        $productId = (int) $license['product_id'];
+
         /** @var array<string, mixed>|null $product */
-        $product = model(\App\Models\ProductModel::class)->find((int) $license['product_id']);
+        $product = model(ProductModel::class)->find($productId);
+
+        // config(JSON)에서 발급 시 선택된 모듈 코드·사용량 한도 복원.
+        $config         = json_decode((string) ($license['config'] ?? '{}'), true);
+        $licenseModules = is_array($config) && isset($config['modules']) && is_array($config['modules'])
+            ? array_values(array_map('strval', $config['modules'])) : [];
+        $limits = is_array($config) && isset($config['limits']) && is_array($config['limits'])
+            ? array_map('intval', $config['limits']) : [];
+
+        $productModules = model(ProductModuleModel::class)->byProduct($productId);
 
         /** @var list<array<string, mixed>> $customers */
         $customers = model(CustomerModel::class)
@@ -85,11 +102,14 @@ final class LicenseQueryService
         $history = model(LicenseHistoryModel::class)->byLicense($id);
 
         return [
-            'license'     => $license,
-            'product'     => $product,
-            'customers'   => $customers,
-            'history'     => $history,
-            'current_key' => service('licenseLifecycleService')->currentKey($id),
+            'license'        => $license,
+            'product'        => $product,
+            'productModules' => $productModules,
+            'licenseModules' => $licenseModules,
+            'limits'         => $limits,
+            'customers'      => $customers,
+            'history'        => $history,
+            'current_key'    => service('licenseLifecycleService')->currentKey($id),
         ];
     }
 }

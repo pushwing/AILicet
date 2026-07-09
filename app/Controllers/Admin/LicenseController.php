@@ -13,6 +13,7 @@ use App\Enums\PeriodCode;
 use App\Exceptions\InvalidStateTransitionException;
 use App\Models\CustomerModel;
 use App\Models\ProductModuleModel;
+use App\Models\ProductVersionModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use RuntimeException;
@@ -70,6 +71,15 @@ final class LicenseController extends BaseAdminController
         ]);
     }
 
+    /** GET /admin/licenses/product-versions/{id} — 상품 버전(JSON, 발급 폼 연동). */
+    public function productVersions(int $productId): ResponseInterface
+    {
+        return $this->response->setJSON([
+            'status' => 'success',
+            'data'   => model(ProductVersionModel::class)->byProduct($productId),
+        ]);
+    }
+
     /** POST /admin/licenses — 발급(종류별 분기). */
     public function create(): RedirectResponse
     {
@@ -80,7 +90,7 @@ final class LicenseController extends BaseAdminController
             'product_id'       => (int) $this->request->getPost('product_id'),
             'period_code'      => (string) $this->request->getPost('period_code'),
             'issued_by'        => $issuedBy,
-            'version'          => $this->request->getPost('version'),
+            'version'          => $this->request->getPost('version') ?: null,
             'expire_date'      => $this->request->getPost('expire_date') ?: null,
             'support_end_date' => $this->request->getPost('support_end_date') ?: null,
             'modules'          => (array) $this->request->getPost('modules'),
@@ -95,13 +105,29 @@ final class LicenseController extends BaseAdminController
         ];
 
         try {
+            // 기간정책별 필수/잠금 필드 검증·정규화(잠금 필드 값 제거). 이슈 #48
+            $normalized = service('licensePolicyValidator')->normalize(
+                $payload['period_code'],
+                $payload['expire_date'],
+                $payload['support_end_date'],
+                $payload['limits'],
+            );
+            $payload['expire_date']      = $normalized['expire_date'];
+            $payload['support_end_date'] = $normalized['support_end_date'];
+            $payload['limits']           = $normalized['limits'];
+
             if ($type === LicenseType::Floating->value) {
                 $result = service('floatingLicenseService')->issue(FloatingIssueRequest::fromArray(array_merge($payload, [
                     'activate_term' => (int) ($this->request->getPost('activate_term') ?: 24),
                     'check_term'    => (int) ($this->request->getPost('check_term') ?: 30),
                 ])));
             } else {
-                $payload['host_id'] = (string) $this->request->getPost('host_id');
+                $host = NodeLockIssueRequest::normalizeHostId((string) $this->request->getPost('host_id'));
+                if ($host === null) {
+                    return redirect()->back()->withInput()
+                        ->with('error', '호스트ID 형식이 올바르지 않습니다. 예: 9F3A-1C7B-E204-8DD6 (tools/hostid 유틸리티로 산출)');
+                }
+                $payload['host_id'] = $host;
                 $result = service('nodeLockLicenseService')->issue(NodeLockIssueRequest::fromArray($payload));
             }
         } catch (RuntimeException $e) {
@@ -181,10 +207,20 @@ final class LicenseController extends BaseAdminController
     public function reissue(int $id): RedirectResponse
     {
         $actor   = (int) (session()->get('authUser')['id'] ?? 0);
-        $newHost = $this->request->getPost('host_id') ?: null;
+
+        // 새 호스트ID 는 선택. 입력된 경우에만 형식을 검증한다(빈 값 = 기존 유지).
+        $newHostRaw = (string) ($this->request->getPost('host_id') ?? '');
+        $newHost    = null;
+        if (trim($newHostRaw) !== '') {
+            $newHost = NodeLockIssueRequest::normalizeHostId($newHostRaw);
+            if ($newHost === null) {
+                return redirect()->back()
+                    ->with('error', '호스트ID 형식이 올바르지 않습니다. 예: 9F3A-1C7B-E204-8DD6 (tools/hostid 유틸리티로 산출)');
+            }
+        }
 
         try {
-            $newKey = service('licenseLifecycleService')->reissue($id, $actor, $newHost !== null ? (string) $newHost : null);
+            $newKey = service('licenseLifecycleService')->reissue($id, $actor, $newHost);
         } catch (InvalidStateTransitionException | RuntimeException $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }

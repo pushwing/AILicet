@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 use App\Exceptions\AitesseraException;
 use App\Integrations\AitesseraClient;
-use CodeIgniter\Config\Factories;
-use CodeIgniter\Config\Services;
-use CodeIgniter\HTTP\Response;
 use CodeIgniter\Test\CIUnitTestCase;
-use Config\App;
+use Tests\Support\Traits\FakeCurlRequestTrait;
 
 /**
  * AITessera 클라이언트 단위 테스트 — curlrequest 를 가짜 응답으로 주입.
@@ -17,31 +14,7 @@ use Config\App;
  */
 final class AitesseraClientTest extends CIUnitTestCase
 {
-    /**
-     * 지정한 상태코드·본문을 반환하는 가짜 curlrequest 를 주입한다.
-     */
-    private function fakeCurl(int $status, string $body): void
-    {
-        $response = (new Response(Factories::config(App::class)))
-            ->setStatusCode($status)
-            ->setBody($body);
-
-        $fake = new class ($response) {
-            public function __construct(private readonly Response $response)
-            {
-            }
-
-            /**
-             * @param array<string, mixed> $options
-             */
-            public function request(string $method, string $url, array $options = []): Response
-            {
-                return $this->response;
-            }
-        };
-
-        Services::injectMock('curlrequest', $fake);
-    }
+    use FakeCurlRequestTrait;
 
     public function testListUsersReturnsItemsAndMeta(): void
     {

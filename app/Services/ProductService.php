@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\DTO\ProductRequest;
+use App\Models\LicenseModel;
+use App\Models\ModuleModel;
 use App\Models\ProductModel;
 use App\Models\ProductModuleModel;
+use App\Models\ProductVersionModel;
 use RuntimeException;
 
 /**
@@ -25,11 +28,15 @@ final class ProductService
 
     private ProductModel $products;
     private ProductModuleModel $modules;
+    private ModuleModel $moduleMaster;
+    private ProductVersionModel $versions;
 
     public function __construct()
     {
-        $this->products = model(ProductModel::class);
-        $this->modules  = model(ProductModuleModel::class);
+        $this->products     = model(ProductModel::class);
+        $this->modules      = model(ProductModuleModel::class);
+        $this->moduleMaster = model(ModuleModel::class);
+        $this->versions     = model(ProductVersionModel::class);
     }
 
     /**
@@ -46,9 +53,13 @@ final class ProductService
     }
 
     /**
-     * 상품 단건 + 모듈.
+     * 상품 단건 + 모듈 + 활성 버전.
      *
-     * @return array{product: array<string, mixed>, modules: list<array{id:int, product_id:int, code:string, name:string}>}|null
+     * @return array{
+     *     product: array<string, mixed>,
+     *     modules: list<array{id:int, product_id:int, code:string, name:string}>,
+     *     versions: list<array{id:int, product_id:int, version:string}>
+     * }|null
      */
     public function find(int $id): ?array
     {
@@ -59,8 +70,9 @@ final class ProductService
         }
 
         return [
-            'product' => $product,
-            'modules' => $this->modules->byProduct($id),
+            'product'  => $product,
+            'modules'  => $this->modules->byProduct($id),
+            'versions' => $this->versions->byProduct($id),
         ];
     }
 
@@ -94,11 +106,12 @@ final class ProductService
         $db = db_connect();
         $db->transStart();
 
-        $productId = (int) ($this->products->insert($dto->toProductRow(), true) ?: 0);
+        $productId = (int) ($this->products->insert($this->rowWithSanitizedDescription($dto), true) ?: 0);
         if ($productId === 0) {
             throw new RuntimeException($this->firstError($this->products->errors()));
         }
-        $this->syncModules($productId, $dto->modules);
+        $this->syncModules($productId, $dto->moduleIds);
+        $this->syncVersions($productId, $dto->versions);
 
         $db->transComplete();
         if ($db->transStatus() === false) {
@@ -111,7 +124,10 @@ final class ProductService
     }
 
     /**
-     * 상품 수정(+모듈 재동기화).
+     * 상품 기본정보 수정.
+     *
+     * 모듈 구성은 생성 시 확정되며 이후 변경할 수 없다(이미 판매된 상품 보호). 여기서는 건드리지 않는다.
+     * 버전은 시간이 지나며 추가되는 성격이라 수정 시에도 관리할 수 있다(추가·비활성).
      *
      * @throws RuntimeException 유효성·저장 실패
      */
@@ -121,40 +137,121 @@ final class ProductService
         $db->transStart();
 
         // is_unique[...,{id}] 플레이스홀더 치환용으로 id 포함(allowedFields 밖이라 실제 SET 에는 미반영)
-        $row       = $dto->toProductRow();
+        $row       = $this->rowWithSanitizedDescription($dto);
         $row['id'] = $id;
         if ($this->products->update($id, $row) === false) {
             throw new RuntimeException($this->firstError($this->products->errors()));
         }
-        $this->modules->deleteByProduct($id);
-        $this->syncModules($id, $dto->modules);
+        $this->syncVersions($id, $dto->versions);
 
         $db->transComplete();
         if ($db->transStatus() === false) {
-            throw new RuntimeException('상품 수정에 실패했습니다.');
+            throw new RuntimeException('상품 저장에 실패했습니다.');
         }
 
         $this->invalidateCache();
     }
 
-    /** 상품 소프트 삭제. */
+    /**
+     * 상품 소프트 삭제. 발급 이력이 있으면 거부한다.
+     *
+     * @throws RuntimeException 발급 이력이 있을 때
+     */
     public function delete(int $id): void
     {
+        $issued = model(LicenseModel::class)->withDeleted()->where('product_id', $id)->countAllResults() > 0;
+        if ($issued) {
+            throw new RuntimeException('이미 발급 이력이 있는 상품은 삭제할 수 없습니다.');
+        }
+
         $this->products->delete($id);
         $this->invalidateCache();
     }
 
     /**
-     * @param list<array{code:string, name:string}> $modules
+     * 저장용 상품 행을 만들고 description 을 화이트리스트 정화한다.
+     *
+     * 정화는 저장 경계(create/update)에서 단일 수행 → DB 엔 안전한 HTML 만 보관하고
+     * 출력은 신뢰하고 그대로 렌더한다.
+     *
+     * @return array{product_code:string, name:string, description:?string, product_family:?string, license_type:string, version:?string, period_code:?string, is_active:int}
      */
-    private function syncModules(int $productId, array $modules): void
+    private function rowWithSanitizedDescription(ProductRequest $dto): array
     {
-        foreach ($modules as $module) {
+        $row = $dto->toProductRow();
+
+        $clean              = service('htmlSanitizer')->sanitize((string) $dto->description);
+        $row['description'] = $clean === '' ? null : $clean;
+
+        return $row;
+    }
+
+    /**
+     * 선택한 모듈 마스터를 상품에 연결(code/name 스냅샷).
+     *
+     * @param list<int> $moduleIds
+     */
+    private function syncModules(int $productId, array $moduleIds): void
+    {
+        if ($moduleIds === []) {
+            return;
+        }
+
+        /** @var list<array{id:int, code:string, name:string}> $masters */
+        $masters = $this->moduleMaster
+            ->select('id, code, name')
+            ->whereIn('id', $moduleIds)
+            ->where('is_active', 1)
+            ->findAll();
+
+        foreach ($masters as $master) {
             $this->modules->insert([
                 'product_id' => $productId,
-                'code'       => $module['code'],
-                'name'       => $module['name'],
+                'module_id'  => (int) $master['id'],
+                'code'       => $master['code'],
+                'name'       => $master['name'],
             ]);
+        }
+    }
+
+    /**
+     * 상품 버전 목록을 원하는 활성 집합에 맞춰 동기화한다.
+     *
+     * - 목록에 있으나 없는 버전 → 신규 삽입(활성)
+     * - 목록에 있고 비활성 상태였던 버전 → 재활성
+     * - 목록에서 빠진 기존 활성 버전 → 비활성(하드 삭제 대신 소프트 숨김, 발급 이력 보존)
+     *
+     * @param list<string> $versions
+     */
+    private function syncVersions(int $productId, array $versions): void
+    {
+        $existing = $this->versions->allByProduct($productId);
+
+        /** @var array<string, array{id:int, product_id:int, version:string, is_active:int}> $existingByVersion */
+        $existingByVersion = [];
+        foreach ($existing as $row) {
+            $existingByVersion[$row['version']] = $row;
+        }
+
+        foreach ($versions as $version) {
+            if (isset($existingByVersion[$version])) {
+                if ((int) $existingByVersion[$version]['is_active'] !== 1) {
+                    $this->versions->update((int) $existingByVersion[$version]['id'], ['is_active' => 1]);
+                }
+            } else {
+                $this->versions->insert([
+                    'product_id' => $productId,
+                    'version'    => $version,
+                    'is_active'  => 1,
+                ]);
+            }
+        }
+
+        $desired = array_flip($versions);
+        foreach ($existing as $row) {
+            if (! isset($desired[$row['version']]) && (int) $row['is_active'] === 1) {
+                $this->versions->update((int) $row['id'], ['is_active' => 0]);
+            }
         }
     }
 

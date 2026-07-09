@@ -20,6 +20,10 @@ $routes->group('client', ['filter' => 'adminAuth:member'], static function (Rout
     $routes->post('profile', 'Client\ProfileController::update');
     $routes->get('support', 'Client\SupportController::index');
     $routes->post('support', 'Client\SupportController::create');
+    // 수신함(알림)
+    $routes->get('notifications', 'Client\NotificationController::index');
+    $routes->post('notifications/read-all', 'Client\NotificationController::readAll');
+    $routes->post('notifications/(:num)/read', 'Client\NotificationController::read/$1');
 });
 
 // ── 대행사 영역 (소유권 스코프) ──
@@ -41,8 +45,13 @@ $routes->group('agency', ['filter' => 'adminAuth:agency'], static function (Rout
         $routes->get('new', 'Agency\LicenseController::new');
         $routes->post('/', 'Agency\LicenseController::create');
         $routes->get('product-modules/(:num)', 'Agency\LicenseController::productModules/$1');
+        $routes->get('product-versions/(:num)', 'Agency\LicenseController::productVersions/$1');
         $routes->get('(:num)', 'Agency\LicenseController::show/$1');
     });
+    // 수신함(알림)
+    $routes->get('notifications', 'Agency\NotificationController::index');
+    $routes->post('notifications/read-all', 'Agency\NotificationController::readAll');
+    $routes->post('notifications/(:num)/read', 'Agency\NotificationController::read/$1');
 });
 
 // ── 서버렌더링(Admin/대행사/고객) ──
@@ -55,6 +64,13 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     // 보호 영역 — 세션 인증 필요
     $routes->group('', ['filter' => 'adminAuth'], static function (RouteCollection $routes): void {
         $routes->get('/', 'Admin\DashboardController::index');
+    });
+
+    // 수신함(알림) — 운영자 공용(운영자 전용)
+    $routes->group('notifications', ['filter' => 'adminAuth:operator'], static function (RouteCollection $routes): void {
+        $routes->get('/', 'Admin\NotificationController::index');
+        $routes->post('read-all', 'Admin\NotificationController::readAll');
+        $routes->post('(:num)/read', 'Admin\NotificationController::read/$1');
     });
 
     // 운영자 관리(AITessera) — 운영자 전용
@@ -85,6 +101,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('new', 'Admin\LicenseController::new');
         $routes->post('/', 'Admin\LicenseController::create');
         $routes->get('product-modules/(:num)', 'Admin\LicenseController::productModules/$1');
+        $routes->get('product-versions/(:num)', 'Admin\LicenseController::productVersions/$1');
         $routes->get('(:num)', 'Admin\LicenseController::show/$1');
         $routes->get('(:num)/download', 'Admin\LicenseController::download/$1');
         $routes->post('(:num)/suspend', 'Admin\LicenseController::suspend/$1');
@@ -102,6 +119,13 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('(:num)/edit', 'Admin\ProductController::edit/$1');
         $routes->post('(:num)', 'Admin\ProductController::update/$1');
         $routes->post('(:num)/delete', 'Admin\ProductController::delete/$1');
+    });
+
+    // 모듈 마스터 관리 — 운영자 전용 (목록은 상품 화면의 '모듈 관리' 탭)
+    $routes->group('modules', ['filter' => 'adminAuth:operator'], static function (RouteCollection $routes): void {
+        $routes->post('/', 'Admin\ModuleController::create');
+        $routes->post('(:num)', 'Admin\ModuleController::update/$1');
+        $routes->post('(:num)/delete', 'Admin\ModuleController::delete/$1');
     });
 
     // 감사로그 — 운영자 전용 (읽기 전용)

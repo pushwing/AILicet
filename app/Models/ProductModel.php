@@ -12,7 +12,7 @@ use CodeIgniter\Model;
  * 상품(products) 모델.
  *
  * @phpstan-type ProductRow array{
- *     id:int, product_code:string, name:string, product_family:?string,
+ *     id:int, product_code:string, name:string, description:?string, product_family:?string,
  *     license_type:string, version:?string, period_code:?string, is_active:int
  * }
  */
@@ -24,7 +24,7 @@ final class ProductModel extends Model
     protected $useSoftDeletes   = true;
     protected $useTimestamps    = true;
     protected $allowedFields    = [
-        'product_code', 'name', 'product_family', 'license_type',
+        'product_code', 'name', 'description', 'product_family', 'license_type',
         'version', 'period_code', 'is_active',
     ];
 
@@ -39,8 +39,9 @@ final class ProductModel extends Model
 
         $this->validationRules = [
             'id'             => 'permit_empty|is_natural_no_zero', // is_unique {id} 플레이스홀더 요건
-            'product_code'   => "required|max_length[30]|is_unique[products.product_code,id,{id}]",
+            'product_code'   => 'required|max_length[30]|is_unique[products.product_code,id,{id}]',
             'name'           => 'required|max_length[100]',
+            'description'    => 'permit_empty|max_length[20000]',
             'product_family' => 'permit_empty|max_length[50]',
             'license_type'   => "required|in_list[{$licenseTypes}]",
             'version'        => 'permit_empty|max_length[30]',

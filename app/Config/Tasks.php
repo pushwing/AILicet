@@ -17,10 +17,14 @@ final class Tasks extends BaseTasks
 {
     public function init(Scheduler $schedule): void
     {
-        // 매일 09:00 라이센스 일일 배치(만료 알림·종료·부정사용 감지)
-        $schedule->command('license:daily')->daily('09:00')->named('license-daily');
+        // 매일 00:05 라이센스 일일 배치(만료 알림·종료·부정사용 감지)
+        $schedule->command('license:daily')->daily('00:05')->named('license-daily');
 
         // 매분 로그 큐 소비(원시파일 + DB)
         $schedule->command('logs:consume')->everyMinute()->named('logs-consume');
+
+        // 5분마다 미분류 로그 AI 분류·요약(ANTHROPIC_API_KEY 미설정 시 no-op)
+        // singleInstance: 배치가 5분을 넘겨도 다음 틱과 겹쳐 AI 이중 호출되지 않도록 캐시 락.
+        $schedule->command('ai:classify-logs')->everyFiveMinutes()->named('ai-classify-logs')->singleInstance();
     }
 }

@@ -15,30 +15,43 @@ $roleLabel  = $role?->label() ?? '게스트';
 $userName   = is_array($authUser) ? (string) ($authUser['name'] ?? '사용자') : '게스트';
 $activeMenu = $activeMenu ?? '';
 $title      = $title ?? 'AILicet';
+$unread     = (int) ($unreadNotifications ?? 0);
 
 // 권한별 메뉴 정의
 $menus = match ($role) {
     UserRole::Operator => [
-        ['key' => 'dashboard', 'label' => '대시보드', 'icon' => '▦', 'url' => '/admin'],
-        ['key' => 'accounts',  'label' => '운영자 관리', 'icon' => '🪪', 'url' => '/admin/accounts'],
-        ['key' => 'members',   'label' => '회원관리', 'icon' => '👤', 'url' => '/admin/members'],
-        ['key' => 'licenses',  'label' => '라이센스', 'icon' => '🔑', 'url' => '/admin/licenses'],
-        ['key' => 'products',  'label' => '상품·모듈', 'icon' => '📦', 'url' => '/admin/products'],
-        ['key' => 'audit',     'label' => '감사로그', 'icon' => '🛡', 'url' => '/admin/audit-logs'],
+        ['key' => 'dashboard',     'label' => '대시보드', 'icon' => '▦', 'url' => '/admin'],
+        ['key' => 'accounts',      'label' => '운영자 관리', 'icon' => '🪪', 'url' => '/admin/accounts'],
+        ['key' => 'members',       'label' => '회원관리', 'icon' => '👤', 'url' => '/admin/members'],
+        ['key' => 'licenses',      'label' => '라이센스', 'icon' => '🔑', 'url' => '/admin/licenses'],
+        ['key' => 'products',      'label' => '상품·모듈', 'icon' => '📦', 'url' => '/admin/products'],
+        ['key' => 'audit',         'label' => '감사로그', 'icon' => '🛡', 'url' => '/admin/audit-logs'],
+        ['key' => 'notifications', 'label' => '알림', 'icon' => '🔔', 'url' => '/admin/notifications'],
     ],
     UserRole::Agency => [
-        ['key' => 'customers', 'label' => '고객관리', 'icon' => '👤', 'url' => '/agency/customers'],
-        ['key' => 'licenses',  'label' => '라이센스', 'icon' => '🔑', 'url' => '/agency/licenses'],
+        ['key' => 'customers',     'label' => '고객관리', 'icon' => '👤', 'url' => '/agency/customers'],
+        ['key' => 'licenses',      'label' => '라이센스', 'icon' => '🔑', 'url' => '/agency/licenses'],
+        ['key' => 'notifications', 'label' => '알림', 'icon' => '🔔', 'url' => '/agency/notifications'],
     ],
     UserRole::Member => [
-        ['key' => 'licenses',  'label' => '내 라이센스', 'icon' => '🔑', 'url' => '/client/licenses'],
-        ['key' => 'support',   'label' => '고객센터',   'icon' => '💬', 'url' => '/client/support'],
-        ['key' => 'profile',   'label' => '내 정보',    'icon' => '👤', 'url' => '/client/profile'],
+        ['key' => 'licenses',      'label' => '내 라이센스', 'icon' => '🔑', 'url' => '/client/licenses'],
+        ['key' => 'support',       'label' => '고객센터',   'icon' => '💬', 'url' => '/client/support'],
+        ['key' => 'profile',       'label' => '내 정보',    'icon' => '👤', 'url' => '/client/profile'],
+        ['key' => 'notifications', 'label' => '알림', 'icon' => '🔔', 'url' => '/client/notifications'],
     ],
     default => [
         ['key' => 'dashboard', 'label' => '대시보드', 'icon' => '▦', 'url' => '/admin'],
     ],
 };
+
+// 알림 메뉴 URL(토프바 벨 링크)
+$notifUrl = '';
+foreach ($menus as $m) {
+    if ($m['key'] === 'notifications') {
+        $notifUrl = $m['url'];
+        break;
+    }
+}
 ?>
 <!doctype html>
 <html lang="ko">
@@ -62,6 +75,9 @@ $menus = match ($role) {
                    href="<?= esc($menu['url']) ?>">
                     <span class="nav-item__icon"><?= $menu['icon'] ?></span>
                     <span><?= esc($menu['label']) ?></span>
+                    <?php if ($menu['key'] === 'notifications' && $unread > 0): ?>
+                        <span class="badge badge--danger" style="margin-left:auto;"><?= esc((string) $unread) ?></span>
+                    <?php endif; ?>
                 </a>
             <?php endforeach; ?>
         </nav>
@@ -71,6 +87,14 @@ $menus = match ($role) {
         <header class="topbar">
             <div class="topbar__title"><?= esc($title) ?></div>
             <div class="topbar__user">
+                <?php if ($notifUrl !== ''): ?>
+                    <a class="topbar__bell" href="<?= esc($notifUrl) ?>" title="알림" style="position:relative;text-decoration:none;font-size:20px;margin-right:6px;">
+                        🔔
+                        <?php if ($unread > 0): ?>
+                            <span class="badge badge--danger" style="position:absolute;top:-6px;right:-10px;font-size:11px;"><?= esc((string) $unread) ?></span>
+                        <?php endif; ?>
+                    </a>
+                <?php endif; ?>
                 <div class="topbar__meta">
                     <div class="topbar__name"><?= esc($userName) ?></div>
                     <div class="topbar__role"><?= esc($roleLabel) ?></div>

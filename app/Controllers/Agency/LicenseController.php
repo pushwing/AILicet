@@ -11,6 +11,7 @@ use App\Enums\LicenseType;
 use App\Enums\PeriodCode;
 use App\Models\CustomerModel;
 use App\Models\ProductModuleModel;
+use App\Models\ProductVersionModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use RuntimeException;
@@ -71,6 +72,12 @@ final class LicenseController extends BaseAgencyController
         return $this->response->setJSON(['status' => 'success', 'data' => model(ProductModuleModel::class)->byProduct($productId)]);
     }
 
+    /** GET /agency/licenses/product-versions/{id} */
+    public function productVersions(int $productId): ResponseInterface
+    {
+        return $this->response->setJSON(['status' => 'success', 'data' => model(ProductVersionModel::class)->byProduct($productId)]);
+    }
+
     /** POST /agency/licenses — 발급(자기 고객 대상). */
     public function create(): RedirectResponse
     {
@@ -83,20 +90,43 @@ final class LicenseController extends BaseAgencyController
         $issuedBy = (int) (session()->get('authUser')['id'] ?? 0);
 
         $payload = [
-            'product_id'  => (int) $this->request->getPost('product_id'),
-            'period_code' => (string) $this->request->getPost('period_code'),
-            'issued_by'   => $issuedBy,
-            'customer_id' => $customerId,
-            'version'     => $this->request->getPost('version'),
-            'expire_date' => $this->request->getPost('expire_date') ?: null,
-            'modules'     => (array) $this->request->getPost('modules'),
+            'product_id'       => (int) $this->request->getPost('product_id'),
+            'period_code'      => (string) $this->request->getPost('period_code'),
+            'issued_by'        => $issuedBy,
+            'customer_id'      => $customerId,
+            'version'          => $this->request->getPost('version') ?: null,
+            'expire_date'      => $this->request->getPost('expire_date') ?: null,
+            'support_end_date' => $this->request->getPost('support_end_date') ?: null,
+            'modules'          => (array) $this->request->getPost('modules'),
+            'limits'           => array_filter([
+                'count'  => $this->request->getPost('limit_count') !== null && $this->request->getPost('limit_count') !== ''
+                    ? (int) $this->request->getPost('limit_count') : null,
+                'credit' => $this->request->getPost('limit_credit') !== null && $this->request->getPost('limit_credit') !== ''
+                    ? (int) $this->request->getPost('limit_credit') : null,
+            ], static fn ($v) => $v !== null),
         ];
 
         try {
+            // 기간정책별 필수/잠금 필드 검증·정규화. 이슈 #48
+            $normalized = service('licensePolicyValidator')->normalize(
+                $payload['period_code'],
+                $payload['expire_date'],
+                $payload['support_end_date'],
+                $payload['limits'],
+            );
+            $payload['expire_date']      = $normalized['expire_date'];
+            $payload['support_end_date'] = $normalized['support_end_date'];
+            $payload['limits']           = $normalized['limits'];
+
             if ($type === LicenseType::Floating->value) {
                 $result = service('floatingLicenseService')->issue(FloatingIssueRequest::fromArray($payload));
             } else {
-                $payload['host_id'] = (string) $this->request->getPost('host_id');
+                $host = NodeLockIssueRequest::normalizeHostId((string) $this->request->getPost('host_id'));
+                if ($host === null) {
+                    return redirect()->back()->withInput()
+                        ->with('error', '호스트ID 형식이 올바르지 않습니다. 예: 9F3A-1C7B-E204-8DD6 (tools/hostid 유틸리티로 산출)');
+                }
+                $payload['host_id'] = $host;
                 $result = service('nodeLockLicenseService')->issue(NodeLockIssueRequest::fromArray($payload));
             }
         } catch (RuntimeException $e) {

@@ -28,6 +28,16 @@ abstract class BaseAdminController extends Controller
 
         $authUser = session()->get('authUser');
         $this->viewData['authUser'] = is_array($authUser) ? $authUser : null;
+
+        // 수신함 미읽음 배지(전 페이지 공통) — 운영자는 공용, 대행사/회원은 본인 스코프
+        $role                                  = is_array($authUser) ? (int) ($authUser['role'] ?? 0) : 0;
+        $this->viewData['unreadNotifications'] = service('notificationService')->unreadCount($role, $this->authUserId());
+    }
+
+    /** 로그인 사용자(AITessera user id). 비로그인 시 0. */
+    protected function authUserId(): int
+    {
+        return (int) (session()->get('authUser')['id'] ?? 0);
     }
 
     /**
