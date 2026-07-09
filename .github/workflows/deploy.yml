@@ -1,0 +1,76 @@
+name: Deploy
+
+# main push(= dev → main PR 머지) 시 프로덕션 서버로 SSH 자동 배포.
+# workflow_dispatch 로 수동 실행·롤백(ref 지정) 가능.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: '배포할 커밋/브랜치 (롤백 시 지정, 비우면 origin/main)'
+        required: false
+        default: ''
+
+# 배포는 동시에 1개만. 진행 중 배포는 취소하지 않는다(중단 시 서버 상태 손상 방지).
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy (SSH · main → 프로덕션)
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: 프로덕션 서버 배포 (SSH)
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_REF: ${{ github.event.inputs.ref }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          command_timeout: 15m
+          script_stop: true
+          envs: DEPLOY_PATH,DEPLOY_REF
+          script: |
+            set -euo pipefail
+            cd "$DEPLOY_PATH"
+
+            # 배포 대상 ref (workflow_dispatch 입력 있으면 그것, 없으면 origin/main)
+            TARGET="${DEPLOY_REF:-origin/main}"
+            echo "▶ 배포 대상: $TARGET"
+
+            # 1) 최신 소스 반영 (리모트는 SSH 여야 함 — deploy key)
+            git fetch --all --prune
+            git reset --hard "$TARGET"
+            echo "▶ 배포 커밋: $(git rev-parse --short HEAD)"
+
+            # 2) writable 보장 — 반드시 composer/migrate 이전 (없으면 spark 부팅 실패)
+            mkdir -p writable/cache writable/logs writable/session writable/uploads writable/debugbar
+            mkdir -p writable/logs/raw writable/logs/queue-failed
+            # www-data 소유 파일 때문에 실패할 수 있으므로 best-effort (근본 해결은 서버 setgid 구성)
+            chmod -R 775 writable 2>/dev/null || echo "⚠️ writable chmod 일부 실패(무시) — setgid 구성 권장"
+
+            # 3) 운영 의존성 설치
+            composer install --no-dev --optimize-autoloader --no-interaction
+
+            # 4) 마이그레이션 — spark 는 실패해도 exit 0 을 반환하므로 출력을 직접 검사
+            MIGRATE_OUT="$(php spark migrate --all -f 2>&1)"
+            echo "$MIGRATE_OUT"
+            if echo "$MIGRATE_OUT" | grep -qiE '\[.*Exception\]|Unable to connect|Access denied|SQLSTATE'; then
+              echo "❌ 마이그레이션 예외 감지 — 배포 중단"
+              exit 1
+            fi
+
+            # 5) 캐시 정리
+            php spark cache:clear
+
+            # 6) 무중단 리로드 (OPcache 갱신)
+            sudo -n systemctl reload apache2
+
+            echo "✅ 배포 완료: $(git rev-parse --short HEAD)"
