@@ -497,6 +497,7 @@ class ProcessLogQueue extends BaseCommand
 ```bash
 composer analyse          # PHPStan 단독 실행
 composer check            # PHPStan + PHPUnit 순차 실행
+composer ci               # CS Fixer + PHPStan + PHPUnit (푸시 전 권장)
 ```
 
 - 분석 레벨: **6** (`phpstan.neon`)
@@ -615,9 +616,11 @@ EOF
 CI 실패를 줄이기 위해 푸시 전 동일 검증을 로컬에서 수행한다.
 
 ```bash
-composer check   # = analyse + test (백엔드)
+composer ci      # = CS Fixer + analyse + test (백엔드) — CI backend 잡과 동일 순서
 # 앱: cd app-mobile && dart format --output=none --set-exit-if-changed lib test && flutter analyze && flutter test
 ```
+
+> ⚠️ `composer check`(analyse+test)는 **CS Fixer를 포함하지 않아** 스타일 위반을 놓친다. CI backend 잡은 CS Fixer도 검사하므로, 푸시 전에는 반드시 `composer ci`를 쓴다. CS 위반은 `composer cs-fix`로 자동 수정 후 커밋한다.
 
 > 새 PHP 코드는 PHPStan level 6 통과 + 관련 PHPUnit 테스트가 그린이어야 CI를 통과한다. 새 기능에는 `tests/` 테스트를 함께 작성한다.
 
