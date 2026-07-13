@@ -4,15 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AI 기반 성형·토탈 광고 솔루션. CodeIgniter 4 기반 Admin + REST API 단일 프로젝트.
 
-> **규칙 문서 구조**
-> 상세 규칙은 주제별로 `.claude/rules/` 에 분리해 두고 아래 `@import` 로 로드한다.
-> 규칙을 수정할 때는 이 파일이 아니라 해당 규칙 파일을 편집한다.
-
-## 언어 규칙
-
-- 모든 응답은 반드시 한국어로 작성할 것
-- 코드 주석도 한국어로 작성할 것
-- 영어 응답은 절대 금지
+> **공통 규칙은 전역 [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) 에서 자동 상속**된다(언어·Git 워크플로우·보안·코드 스타일·테스트·API·LSP). 이 문서와 아래 `.claude/rules/` 는 **AILicet 저장소 전용** 규칙만 정의한다. 규칙 수정 시 해당 rule 파일을 편집한다.
 
 ## 기술 스택
 
@@ -21,11 +13,12 @@ AI 기반 성형·토탈 광고 솔루션. CodeIgniter 4 기반 Admin + REST API
 - **프레임워크**: CodeIgniter 4
 - **인증**: 세션(Admin) / JWT Bearer(API) — JWT는 외부 라이브러리 없이 `JwtLibrary`(HMAC-SHA256)로 직접 구현
 - **API 문서**: Swagger UI (`/api/docs`) — `zircote/swagger-php`
+- **정적 분석**: PHPStan 레벨 6 (`app/`, Views 제외)
 
-> **PHP 버전 구분**  
-> - 웹 요청 처리: FrankenPHP 내장 PHP 8.5.7  
-> - CLI (composer/spark/PHPStan/PHPUnit): 시스템 PHP 8.4.22  
-> - CI (GitHub Actions `backend` 잡): PHP 8.5 (setup-php)  
+> **PHP 버전 구분**
+> - 웹 요청 처리: FrankenPHP 내장 PHP 8.5.7
+> - CLI (composer/spark/PHPStan/PHPUnit): 시스템 PHP 8.4.22
+> - CI (GitHub Actions `backend` 잡): PHP 8.5 (setup-php)
 > - `composer.json` 요구사항은 `^8.4` (8.5 포함)
 
 ## 로컬 환경 설정
@@ -97,24 +90,14 @@ Auth::setUserId((int) $payload['sub']);
 $userId = $this->authUserId();
 ```
 
-## 상세 규칙 (주제별 분리)
+## 상세 규칙 (`.claude/rules/`)
 
-주제별 상세 규칙은 아래 파일로 분리되어 있으며 `@import` 로 자동 로드된다.
+AILicet 고유 규칙은 아래 파일로 분리되어 있으며 `@import` 로 자동 로드된다.
 
 | 규칙 파일 | 내용 |
 |-----------|------|
-| [보안](.claude/rules/security.md) | SQL Injection·XSS·CSRF·시크릿·파일 업로드 등 절대 금지 규칙 |
-| [코드 스타일](.claude/rules/code-style.md) | PSR-12·네이밍·PHP 모던 스타일·레이어 책임·도메인 예외 |
-| [테스트·정적분석](.claude/rules/testing.md) | PHPUnit·PHPStan level 6 |
-| [API 설계](.claude/rules/api-design.md) | 응답 포맷·REST URI·Swagger·부하 분산·로그 파이프라인 |
-| [Admin 뷰](.claude/rules/admin-view.md) | AG Grid·Tiptap·Chart.js·PhpSpreadsheet·뷰 렌더링 |
-| [Git 워크플로우](.claude/rules/git-workflow.md) | 브랜치 전략·머지 방식·커밋 규칙 |
-| [CI·CD·인프라](.claude/rules/ci-cd.md) | GitHub Actions·SSH 배포·Intelephense LSP·클라우드 |
+| [Admin 뷰](.claude/rules/admin-view.md) | 뷰 렌더링·AG Grid·Tiptap·Chart.js·PhpSpreadsheet·브랜드 컬러 |
+| [CI·CD·인프라](.claude/rules/ci-cd.md) | GitHub Actions·SSH 배포·서버 준비·클라우드 |
 
-@.claude/rules/security.md
-@.claude/rules/code-style.md
-@.claude/rules/testing.md
-@.claude/rules/api-design.md
 @.claude/rules/admin-view.md
-@.claude/rules/git-workflow.md
 @.claude/rules/ci-cd.md
