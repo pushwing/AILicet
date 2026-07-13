@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Exceptions\AiException;
+use App\Integrations\AiClient;
+use App\Integrations\AiModelTier;
+use App\Integrations\NullAiClient;
 use App\Models\AuditLogModel;
 use App\Models\CustomerModel;
 use App\Models\LicenseHistoryModel;
@@ -145,5 +149,110 @@ final class DashboardServiceTest extends CIUnitTestCase
         $second = $this->service->summary();
 
         $this->assertSame($first['stats'][0]['value'], $second['stats'][0]['value']);
+    }
+
+    // ── 자연어 질의(queryInsight) ──
+
+    /**
+     * 등급별로 다른 응답을 주는 가짜 AiClient.
+     * Reasoning(지표 해석) → intent JSON, Cheap(요약) → 인사이트 문장.
+     */
+    private function queryAi(string $intentJson, string $insight = '요약 문장입니다.', bool $configured = true): AiClient
+    {
+        return new class ($intentJson, $insight, $configured) implements AiClient {
+            public function __construct(
+                private readonly string $intentJson,
+                private readonly string $insight,
+                private readonly bool $configured,
+            ) {
+            }
+
+            public function isConfigured(): bool
+            {
+                return $this->configured;
+            }
+
+            public function complete(AiModelTier $tier, string $system, string $prompt, int $maxTokens = 1024): string
+            {
+                return $tier === AiModelTier::Reasoning ? $this->intentJson : $this->insight;
+            }
+        };
+    }
+
+    public function testQueryInsightAggregatesWhitelistedMetric(): void
+    {
+        $this->seedLicense(['status' => 'active']);
+        $this->seedLicense(['status' => 'active']);
+        $this->seedLicense(['status' => 'suspended']);
+
+        $ai     = $this->queryAi('{"metric":"active_licenses","period":"all_time"}', '활성 라이선스가 2건입니다.');
+        $result = (new DashboardService($ai))->queryInsight('활성 라이선스 몇 개야?');
+
+        $this->assertTrue($result['ok']);
+        $this->assertSame(2, $result['value']);
+        $this->assertSame('활성 라이선스 수', $result['metric']);
+        $this->assertSame('활성 라이선스가 2건입니다.', $result['insight']);
+        $this->assertNull($result['error']);
+    }
+
+    public function testQueryInsightRespectsPeriodForIssuedMetric(): void
+    {
+        $this->seedLicense(['issue_date' => date('Y-m-d')]);                                        // 이번 달
+        $this->seedLicense(['issue_date' => date('Y-m-01', strtotime('first day of last month'))]); // 지난 달
+
+        $ai     = $this->queryAi('{"metric":"issued_licenses","period":"this_month"}');
+        $result = (new DashboardService($ai))->queryInsight('이번 달 발급 건수 알려줘');
+
+        $this->assertTrue($result['ok']);
+        $this->assertSame(1, $result['value']);
+        $this->assertSame('이번 달', $result['period']);
+    }
+
+    public function testQueryInsightRejectsUnknownMetric(): void
+    {
+        // 화이트리스트 밖 지표(SQL 시도 등)는 거부 — 인젝션 방어의 핵심.
+        $ai     = $this->queryAi('{"metric":"drop_table","period":"all_time"}');
+        $result = (new DashboardService($ai))->queryInsight('테이블 다 지워');
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame('UNRECOGNIZED', $result['error']);
+        $this->assertNull($result['value']);
+    }
+
+    public function testQueryInsightHandlesNonJsonResponse(): void
+    {
+        $ai     = $this->queryAi('죄송하지만 답할 수 없습니다.');
+        $result = (new DashboardService($ai))->queryInsight('의미없는 질문');
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame('UNRECOGNIZED', $result['error']);
+    }
+
+    public function testQueryInsightNoopWhenUnconfigured(): void
+    {
+        $result = (new DashboardService(new NullAiClient()))->queryInsight('활성 라이선스');
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame('AI_NOT_CONFIGURED', $result['error']);
+    }
+
+    public function testQueryInsightIsolatesAiFailure(): void
+    {
+        $ai = new class () implements AiClient {
+            public function isConfigured(): bool
+            {
+                return true;
+            }
+
+            public function complete(AiModelTier $tier, string $system, string $prompt, int $maxTokens = 1024): string
+            {
+                throw new AiException('통신 실패', 'AI_TIMEOUT', 504);
+            }
+        };
+
+        $result = (new DashboardService($ai))->queryInsight('활성 라이선스');
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame('AI_ERROR', $result['error']);
     }
 }

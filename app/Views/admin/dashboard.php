@@ -22,6 +22,25 @@
     <?php endforeach; ?>
 </div>
 
+<!-- AI 자연어 질의 -->
+<div class="card" style="margin-bottom:24px;">
+    <div class="card__head">AI 인사이트 질의</div>
+    <div class="card__body">
+        <form id="aiQueryForm" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <input type="text" id="aiQueryInput" placeholder="예: 이번 달 발급 건수, 만료 임박 몇 개, 부정사용 감지 추이"
+                   style="flex:1;min-width:240px;padding:10px 12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);outline:none;">
+            <button type="submit" id="aiQueryBtn" class="btn btn--primary">질의</button>
+        </form>
+        <div id="aiQueryResult" style="margin-top:14px;display:none;">
+            <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+                <span id="aiQueryMetric" class="badge badge--muted"></span>
+                <span id="aiQueryValue" style="font-size:24px;font-weight:700;color:#0F6E56;"></span>
+            </div>
+            <p id="aiQueryInsight" style="margin:8px 0 0;color:var(--color-text);line-height:1.6;"></p>
+        </div>
+    </div>
+</div>
+
 <!-- 차트 -->
 <div class="card" style="margin-bottom:24px;">
     <div class="card__head">월별 라이선스 발급 추이</div>
@@ -45,6 +64,53 @@
 <?= $this->section('scripts') ?>
 <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // AI 자연어 질의 — POST 후 결과 렌더(값·인사이트)
+    const aiForm = document.getElementById('aiQueryForm');
+    const aiInput = document.getElementById('aiQueryInput');
+    const aiBtn = document.getElementById('aiQueryBtn');
+    const aiResult = document.getElementById('aiQueryResult');
+    const aiMetric = document.getElementById('aiQueryMetric');
+    const aiValue = document.getElementById('aiQueryValue');
+    const aiInsight = document.getElementById('aiQueryInsight');
+
+    aiForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const question = aiInput.value.trim();
+        if (question === '') return;
+
+        aiBtn.disabled = true;
+        aiBtn.textContent = '분석 중…';
+        try {
+            const res = await fetch('/admin/dashboard/query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question }),
+            });
+            const data = await res.json();
+
+            aiResult.style.display = 'block';
+            if (data.ok) {
+                aiMetric.style.display = '';
+                aiValue.style.display = '';
+                aiMetric.textContent = `${data.metric} · ${data.period}`;
+                aiValue.textContent = Number(data.value).toLocaleString() + '건';
+            } else {
+                aiMetric.style.display = 'none';
+                aiValue.style.display = 'none';
+            }
+            aiInsight.textContent = data.insight || '';
+        } catch (err) {
+            aiResult.style.display = 'block';
+            aiMetric.style.display = 'none';
+            aiValue.style.display = 'none';
+            aiInsight.textContent = '질의 처리 중 오류가 발생했습니다.';
+        } finally {
+            aiBtn.disabled = false;
+            aiBtn.textContent = '질의';
+        }
+    });
+</script>
 <script>
     // 차트 — 컨트롤러 전달 데이터
     new Chart(document.getElementById('issueChart'), {
