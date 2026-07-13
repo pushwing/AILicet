@@ -107,4 +107,28 @@ final class AuditLogAdminTest extends CIUnitTestCase
         $result = $this->withSession($this->operator())->get('admin/audit-logs/9999');
         $result->assertRedirectTo('/admin/audit-logs');
     }
+
+    public function testShowDisplaysAiExplanationWhenPresent(): void
+    {
+        $id = (int) model(AuditLogModel::class)->insert([
+            'event_type'     => AuditEventType::IllegalHost->value,
+            'license_key'    => 'KEY-EXP',
+            'ai_explanation' => '등록된 호스트와 다른 기기에서 사용이 감지되었습니다.',
+        ], true);
+
+        $result = $this->withSession($this->operator())->get("admin/audit-logs/{$id}");
+
+        $result->assertStatus(200);
+        $result->assertSee('AI 설명');
+        $result->assertSee('등록된 호스트와 다른 기기에서 사용이 감지되었습니다.');
+    }
+
+    public function testShowWithoutAiExplanationOmitsCard(): void
+    {
+        $id     = $this->seedLog();
+        $result = $this->withSession($this->operator())->get("admin/audit-logs/{$id}");
+
+        $result->assertStatus(200);
+        $result->assertDontSee('AI 설명');
+    }
 }

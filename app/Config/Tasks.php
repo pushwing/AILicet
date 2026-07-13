@@ -29,5 +29,8 @@ final class Tasks extends BaseTasks
 
         // 5분마다 미처리 고객 문의 AI 분류·답변 초안 생성(ANTHROPIC_API_KEY 미설정 시 no-op)
         $schedule->command('ai:draft-inquiries')->everyFiveMinutes()->named('ai-draft-inquiries')->singleInstance();
+
+        // 5분마다 미설명 감사 로그 AI 사람용 설명 생성(ANTHROPIC_API_KEY 미설정 시 no-op)
+        $schedule->command('ai:explain-audit-logs')->everyFiveMinutes()->named('ai-explain-audit-logs')->singleInstance();
     }
 }

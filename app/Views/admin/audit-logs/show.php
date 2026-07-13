@@ -18,6 +18,9 @@ $detailStr = is_array($detail)
     : ($detailRaw !== '' && $detailRaw !== 'null' ? $detailRaw : '');
 
 $licenseId = $log['license_id'] !== null ? (int) $log['license_id'] : null;
+
+// AI 사람용 설명(ai_explanation) — 배치가 채운 경우에만 표시. 없으면 카드 자체를 렌더링하지 않는다.
+$aiExplanation = is_string($log['ai_explanation'] ?? null) ? trim((string) $log['ai_explanation']) : '';
 ?>
 <?= $this->extend('layouts/app') ?>
 
@@ -31,6 +34,16 @@ $licenseId = $log['license_id'] !== null ? (int) $log['license_id'] : null;
     </div>
     <a href="/admin/audit-logs" class="btn btn--ghost">목록</a>
 </div>
+
+<?php if ($aiExplanation !== ''): ?>
+    <!-- AI 사람용 설명 -->
+    <div class="card" style="margin-bottom:20px;border-left:3px solid var(--color-primary,#0F6E56);">
+        <div class="card__head">🤖 AI 설명</div>
+        <div class="card__body">
+            <p style="margin:0;line-height:1.6;"><?= esc($aiExplanation) ?></p>
+        </div>
+    </div>
+<?php endif; ?>
 
 <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:20px;align-items:start;">
     <!-- 이벤트 정보 -->
