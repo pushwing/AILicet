@@ -22,6 +22,7 @@ use App\Queue\RedisLogQueue;
 use App\Services\AbuseDetectionService;
 use App\Services\AgencyService;
 use App\Services\AiAbuseDetectionService;
+use App\Services\AuditLogExplanationService;
 use App\Services\AuditLogQueryService;
 use App\Services\ClientService;
 use App\Services\ClientSignupService;
@@ -243,7 +244,7 @@ class Services extends BaseService
             return static::getSharedInstance('dashboardService');
         }
 
-        return new DashboardService();
+        return new DashboardService(static::aiClient());
     }
 
     /**
@@ -402,6 +403,18 @@ class Services extends BaseService
         }
 
         return new LogClassificationService(static::aiClient());
+    }
+
+    /**
+     * 감사 로그 AI 사람용 설명 생성 서비스.
+     */
+    public static function auditLogExplanationService(bool $getShared = true): AuditLogExplanationService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('auditLogExplanationService');
+        }
+
+        return new AuditLogExplanationService(static::aiClient());
     }
 
     /**

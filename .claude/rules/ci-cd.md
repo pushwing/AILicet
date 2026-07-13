@@ -1,0 +1,163 @@
+# CI · CD · 인프라 규칙
+
+> 이 문서는 `CLAUDE.md` 에서 `@.claude/rules/ci-cd.md` 로 로드된다.
+
+## CI (GitHub Actions)
+
+`dev` · `main` 으로의 **push / PR** 마다 자동 검증된다. 정의: `.github/workflows/ci.yml` (단일 파일, `backend`·`frontapi` 두 잡 병렬). 각 잡은 자체 `mysql:8.0` 서비스 컨테이너를 띄운다.
+
+- **동시성**: 같은 ref 새 푸시 시 진행 중 실행 취소 (`concurrency.cancel-in-progress`)
+
+### `backend` 잡 — PHP 8.5 · CS Fixer · PHPStan · PHPUnit
+
+루트 CI4 프로젝트를 검증한다. 다음 순서로 실행한다.
+
+1. setup-php `8.5` (확장: `mbstring intl mysqli curl dom xml tokenizer`, 커버리지 `pcov`)
+   - `phpunit.dist.xml` 이 `failOnWarning` + `<coverage>` 를 켜 두어 커버리지 드라이버 없으면 경고→실패 → `pcov` 필수
+2. Composer 캐시 → `composer install`
+3. `composer cs` (php-cs-fixer `--dry-run` 스타일 검사)
+4. `env` → `.env` 복사 후 CI용 DB·`JWT_SECRET` 주입
+5. `writable/` 하위 디렉토리 생성 (git 미추적, `WRITEPATH` 보장)
+6. `composer analyse` (PHPStan level 6)
+7. MySQL 헬스 대기 → `phpunit.dist.xml` 의 `database.tests.hostname` 을 `localhost` → `127.0.0.1` 로 sed 치환 (MySQLi TCP 강제)
+8. `composer test` (PHPUnit 단위·DB 통합)
+
+### `frontapi` 잡 — pure PHP · PHPStan · PHPUnit
+
+`frontapi/` 작업 디렉토리(클라이언트 프로그램용 라이선스 인증 API, 순수 PHP·CI4 미사용)를 검증한다.
+
+1. setup-php `8.5` (확장: `mbstring intl pdo_mysql curl dom xml tokenizer`)
+2. `composer install`
+3. `composer analyse` (PHPStan level 6)
+4. MySQL 헬스 대기
+5. `composer test` (PHPUnit — DB 접속정보는 `DB_*` env 로 주입)
+
+### 푸시 전 로컬 사전 검증
+
+CI 실패를 줄이기 위해 푸시 전 동일 검증을 로컬에서 수행한다.
+
+```bash
+composer ci                        # = CS Fixer + analyse + test (루트 백엔드) — CI backend 잡과 동일 순서
+cd frontapi && composer check      # frontapi(pure PHP) — analyse + test
+```
+
+> ⚠️ `composer check`(analyse+test)는 **CS Fixer를 포함하지 않아** 스타일 위반을 놓친다. CI backend 잡은 CS Fixer도 검사하므로, 푸시 전에는 반드시 `composer ci`를 쓴다. CS 위반은 `composer cs-fix`로 자동 수정 후 커밋한다.
+
+> 새 PHP 코드는 PHPStan level 6 통과 + 관련 PHPUnit 테스트가 그린이어야 CI를 통과한다. 새 기능에는 `tests/` 테스트를 함께 작성한다.
+
+## CD (배포)
+
+`main` push(= `dev → main` PR 머지) 시 프로덕션 서버로 **SSH 자동 배포**된다. 정의: `.github/workflows/deploy.yml` (`appleboy/ssh-action`).
+
+> ⚠️ **동작 전제**: 아래 GitHub Secrets(`production` 환경)와 서버 사전 준비가 끝나야 실제 배포가 성공한다. Secrets 미설정 상태에서는 잡이 실패한다. 롤백·재배포는 `workflow_dispatch`(수동 실행)에서 `ref` 를 지정한다.
+
+- **트리거**: `main` push + `workflow_dispatch`(수동·롤백, `ref` 입력)
+- **동시성**: `deploy-production` 그룹 — 배포 동시 실행 1개, `cancel-in-progress: false`
+- **대상**: Ubuntu + mod_php 아파치 단일 서버 (`appleboy/ssh-action`)
+
+### 배포 절차 (`deploy.yml` 이 SSH 로 서버에서 자동 실행 — 수동 실행 시 동일 순서)
+
+1. `git reset --hard origin/main` — 최신 main 반영
+2. `writable/` 디렉토리 생성 — **반드시 composer/migrate 이전** (없으면 spark 부팅 실패 `WRITEPATH is not set correctly`)
+3. `composer install --no-dev --optimize-autoloader`
+4. `php spark migrate --all -f` — 출력을 grep 검사해 예외 감지 시 `exit 1` 로 배포 중단
+5. `php spark cache:clear`
+6. `sudo -n systemctl reload apache2` — OPcache 갱신(무중단)
+
+> **spark migrate 함정**: DB 연결 실패·마이그레이션 예외가 나도 종료코드 0 을 반환한다. `set -e` 로 못 잡으므로 출력을 캡처해 예외 패턴(`[...Exception]`·`Unable to connect`·`Access denied`)을 직접 검사하고 실패 시 배포를 중단한다.
+
+> **writable chmod 함정**: 런타임에 아파치(`www-data`)가 만든 `writable/cache`·`session` 파일은 배포 계정 소유가 아니라 `chmod -R 775 writable` 가 `Operation not permitted` 로 실패한다. `set -e` 로 배포가 중단되지 않도록 이 `chmod` 는 best-effort(`2>/dev/null || echo …`)로 처리한다. 근본 해결은 아래 서버 준비의 setgid 구성이다.
+
+### 필요한 GitHub Secrets (`production` 환경 — 자동화 시)
+
+`deploy.yml` 도입 시 아래 Secrets 가 필요하다(수동 배포에는 불필요).
+
+`DEPLOY_HOST` · `DEPLOY_USER` · `DEPLOY_SSH_KEY` · `DEPLOY_PORT` · `DEPLOY_PATH`
+
+### 서버 사전 준비 (한 번만)
+
+- **GitHub 읽기전용 deploy key** — 서버 저장소 리모트를 SSH(`git@github.com:...`)로 설정 (HTTPS면 `could not read Username` 실패)
+- **프로덕션 `.env`** 에 실제 DB 접속정보 (없으면 migrate 시 `Access denied`)
+- **비밀번호 없는 sudo**: `/etc/sudoers.d/aicura-deploy` 에 `<DEPLOY_USER> ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload apache2` (없으면 `sudo: a password is required` 로 실패)
+- 아파치 `DocumentRoot` 는 `public/`, `writable/` 는 아파치 유저(`www-data`) 쓰기 가능
+- **writable setgid 구성(권장)** — 소유권 충돌로 인한 chmod 실패를 근본 제거:
+  ```bash
+  sudo chown -R <DEPLOY_USER>:www-data <DEPLOY_PATH>/writable
+  sudo chmod -R 2775 <DEPLOY_PATH>/writable   # setgid: 새 파일이 www-data 그룹 상속
+  ```
+
+### 배포 후 — 기본 관리자 계정 (최초 1회)
+
+배포에는 마이그레이션만 포함되고 **시더는 자동 실행되지 않는다.** 관리자 계정(`admin@aicura.com` / `user_type=401`)이 없으면 서버에서 한 번 실행한다(재실행 안전).
+
+```bash
+cd <DEPLOY_PATH> && php spark db:seed AdminUserSeeder
+```
+
+### 브랜치 자동 삭제 정책
+
+- **`feature/*` (→ `dev` 머지 후)**: **자동 삭제**한다. `--delete-branch` 로 머지해 머지 완료와 동시에 로컬·원격 feature 브랜치를 정리한다.
+  ```bash
+  gh pr merge <PR번호> --squash --delete-branch
+  ```
+  수동 UI 머지 시엔 머지 후 "Delete branch" 버튼으로 정리한다.
+- **`dev` (→ `main` 머지 후)**: **삭제하지 않는다.** `dev` 가 사라지면 배포 흐름·다음 PR 기준 브랜치가 깨진다.
+- **`main`**: 기본 브랜치라 삭제 불가.
+
+> ⚠️ GitHub 저장소 설정 `delete_branch_on_merge` 는 **저장소 전체 일괄 적용**이라 feature 만 골라 자동삭제할 수 없다. 그래서 `dev` 보호를 위해 이 설정은 **`false`** 로 두고(→ `dev → main` 머지 시 `dev` 자동삭제 방지), `feature/*` 삭제는 머지 명령의 **`--delete-branch` 로 개별 처리**한다. (프라이빗+무료 플랜은 브랜치 보호·Ruleset API 가 Pro 필요라 사용 불가.)
+
+## PHP 언어 서버 (Intelephense LSP)
+
+Claude Code 가 PHP 코드를 심볼 단위(정의 이동·참조 찾기·자동완성)로 정확히 다루도록 **Intelephense LSP** 를 연동한다. PHPStan 이 "타입 오류 검사"라면 Intelephense 는 "코드 구조 이해" 역할로 상호 보완한다.
+
+> 이 연동은 **Claude Code CLI 세션 전용**이다. VS Code·JetBrains 확장에서 쓰는 Intelephense 와는 별개 인스턴스이므로 에디터에는 에디터대로 따로 설치한다.
+
+### 설치 (최초 1회)
+
+```bash
+# 1. 바이너리 설치 (Node.js + npm 필요)
+npm install -g intelephense
+
+# 2. 로컬 LSP 플러그인 생성 (~/.claude/skills/ 하위 → 전 프로젝트 공용)
+mkdir -p ~/.claude/skills/php-lsp-intelephense/.claude-plugin
+
+cat > ~/.claude/skills/php-lsp-intelephense/.claude-plugin/plugin.json << 'EOF'
+{
+  "name": "php-lsp-intelephense",
+  "description": "Intelephense PHP 언어 서버",
+  "version": "1.0.0"
+}
+EOF
+
+cat > ~/.claude/skills/php-lsp-intelephense/.lsp.json << 'EOF'
+{
+  "php": {
+    "command": "intelephense",
+    "args": ["--stdio"],
+    "extensionToLanguage": { ".php": "php" }
+  }
+}
+EOF
+```
+
+> ⚠️ 공식 `php-lsp@claude-plugins-official` 플러그인은 `.lsp.json` 이 누락되어 동작하지 않는다([이슈 #444](https://github.com/anthropics/claude-plugins-official/issues/444)). 위처럼 로컬 플러그인을 직접 만든다.
+
+### 활성화·확인
+
+- **활성화**: 새 Claude Code 세션을 시작하거나, 대화형 세션에서 `/reload-plugins` 실행 (플러그인은 세션 시작 시 로드된다)
+- **확인**: `/help` 의 "Installed plugins" 에 `php-lsp-intelephense` 표시
+- **동작 점검**: `intelephense --version` 은 플래그 미지원으로 에러를 뱉으니 정상 판정 근거로 쓰지 말 것. 실제 기동은 `--stdio` 모드의 `initialize` 응답으로 확인한다.
+
+### 사용
+
+개발자가 직접 실행하는 명령이 아니라, Claude 가 PHP 코드를 다룰 때 뒤에서 참조한다. "이 메서드 쓰는 곳 전부 찾아줘", "정의로 가줘" 같은 요청을 텍스트 grep 대신 심볼 단위로 정확히 처리한다.
+
+- **무료 범위**: 정의 이동·참조 찾기·자동완성·심볼 검색 (충분)
+- **프리미엄($25/년)**: 워크스페이스 전역 rename·고급 리팩토링
+
+## 클라우드·인프라 (참고)
+
+- **AWS 기본 스택**: ECS(Fargate) + RDS + ElastiCache(Redis) + SQS
+- **시크릿 관리**: `.env` 커밋 금지 — AWS SSM Parameter Store / Secrets Manager 사용
+- **로그**: 구조화 로그(JSON) 지향
+- **헬스체크**: `GET /health` 엔드포인트 (DB·캐시 연결 상태 포함) 제공 권장
