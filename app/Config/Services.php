@@ -244,7 +244,7 @@ class Services extends BaseService
             return static::getSharedInstance('dashboardService');
         }
 
-        return new DashboardService();
+        return new DashboardService(static::aiClient());
     }
 
     /**

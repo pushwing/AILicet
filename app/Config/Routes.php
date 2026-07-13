@@ -64,6 +64,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     // 보호 영역 — 세션 인증 필요
     $routes->group('', ['filter' => 'adminAuth'], static function (RouteCollection $routes): void {
         $routes->get('/', 'Admin\DashboardController::index');
+        $routes->post('dashboard/query', 'Admin\DashboardController::query');
     });
 
     // 수신함(알림) — 운영자 공용(운영자 전용)
