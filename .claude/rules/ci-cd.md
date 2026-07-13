@@ -94,9 +94,17 @@ cd frontapi && composer check      # frontapi(pure PHP) — analyse + test
 cd <DEPLOY_PATH> && php spark db:seed AdminUserSeeder
 ```
 
-### 브랜치 삭제 방지
+### 브랜치 자동 삭제 정책
 
-저장소가 프라이빗+무료 플랜이라 GitHub 브랜치 보호·Ruleset API 는 사용 불가(Pro 필요). 대신 저장소 설정 `delete_branch_on_merge=false` 로 `dev → main` 머지 시 `dev` 자동삭제를 막는다. `main` 은 기본 브랜치라 삭제 불가.
+- **`feature/*` (→ `dev` 머지 후)**: **자동 삭제**한다. `--delete-branch` 로 머지해 머지 완료와 동시에 로컬·원격 feature 브랜치를 정리한다.
+  ```bash
+  gh pr merge <PR번호> --squash --delete-branch
+  ```
+  수동 UI 머지 시엔 머지 후 "Delete branch" 버튼으로 정리한다.
+- **`dev` (→ `main` 머지 후)**: **삭제하지 않는다.** `dev` 가 사라지면 배포 흐름·다음 PR 기준 브랜치가 깨진다.
+- **`main`**: 기본 브랜치라 삭제 불가.
+
+> ⚠️ GitHub 저장소 설정 `delete_branch_on_merge` 는 **저장소 전체 일괄 적용**이라 feature 만 골라 자동삭제할 수 없다. 그래서 `dev` 보호를 위해 이 설정은 **`false`** 로 두고(→ `dev → main` 머지 시 `dev` 자동삭제 방지), `feature/*` 삭제는 머지 명령의 **`--delete-branch` 로 개별 처리**한다. (프라이빗+무료 플랜은 브랜치 보호·Ruleset API 가 Pro 필요라 사용 불가.)
 
 ## PHP 언어 서버 (Intelephense LSP)
 
