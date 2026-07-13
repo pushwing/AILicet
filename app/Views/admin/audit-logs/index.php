@@ -74,6 +74,8 @@
             { field: 'license_key', headerName: '라이센스키', flex: 1.1, valueFormatter: p => p.value || '-' },
             { field: 'client_host_id', headerName: '사용 호스트', flex: 1, valueFormatter: p => p.value || '-' },
             { field: 'ip', headerName: 'IP', flex: 0.8, valueFormatter: p => p.value || '-' },
+            { field: 'ai_explanation', headerName: 'AI 설명', flex: 1.4,
+              tooltipValueGetter: p => p.value || '', valueFormatter: p => p.value || '-' },
             { headerName: '', flex: 0.5, sortable: false,
               cellRenderer: p => `<a class="btn btn--ghost" style="padding:4px 10px" href="/admin/audit-logs/${p.data.id}">상세</a>` },
         ],
