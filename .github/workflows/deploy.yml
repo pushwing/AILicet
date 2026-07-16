@@ -80,10 +80,13 @@ jobs:
       - name: 배포 결과 슬랙 알림
         if: always()
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           DEPLOY_REF: ${{ github.event.inputs.ref || github.sha }}
           DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
           DEPLOY_ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ "$DEPLOY_OUTCOME" = "success" ]; then
@@ -91,7 +94,12 @@ jobs:
           else
             EMOJI="❌"; STATUS_TEXT="배포 실패"
           fi
-          MESSAGE="${EMOJI} [AILicet] ${STATUS_TEXT} — ${DEPLOY_REF} · ${DEPLOY_ACTOR} · ${RUN_URL}"
+
+          COMMIT_MESSAGE="$(gh api "repos/${REPO}/commits/${DEPLOY_REF}" --jq '.commit.message' 2>/dev/null | head -n1)"
+          COMMIT_MESSAGE="${COMMIT_MESSAGE:-(커밋 메시지 조회 실패)}"
+
+          MESSAGE="${EMOJI} [AILicet] ${STATUS_TEXT}"$'\n'"저장소: ${REPO}"$'\n'"브랜치: ${BRANCH}"$'\n'"작성자: ${DEPLOY_ACTOR}"$'\n'"내용: ${COMMIT_MESSAGE}"$'\n'"링크: ${RUN_URL}"
+
           PAYLOAD="$(jq -n --arg text "$MESSAGE" '{text: $text}')"
           curl -sS -X POST -H 'Content-Type: application/json' --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
 
