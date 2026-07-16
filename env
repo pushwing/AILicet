@@ -81,7 +81,10 @@ JWT_SECRET = 'change-me-to-a-random-32+-char-secret'
 
 # RS256 검증용 AITessera 공개키(PEM) 파일 경로. AITessera 의 `jwt:keygen` 으로
 # 생성된 공개키만 배치한다(개인키는 절대 배치 금지).
-# JWT_PUBLIC_KEY_PATH = 'writable/keys/aitessera_public.pem'
+# ⚠️ 반드시 절대경로로 설정한다. 웹 요청 시 PHP 작업 디렉터리(cwd)는 프로젝트
+# 루트가 아니라 public/ 이라, 상대경로는 SSH 셸에서 확인할 땐 파일이 보여도
+# 실제 요청에서는 다른 경로를 찾아 "공개키 파일을 읽을 수 없습니다" 오류가 난다.
+# JWT_PUBLIC_KEY_PATH = '/absolute/path/to/AILicet/writable/keys/aitessera_public.pem'
 
 #--------------------------------------------------------------------
 # 자체 발급 토큰 (플로팅 라이센스 활성화 등 — HS256)
