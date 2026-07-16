@@ -108,7 +108,7 @@ make serve            # FrankenPHP (포트 8300) — 또는 make serve-spark
 `license.ed25519*`(`php spark license:keygen`).
 
 **JWT 검증 키** — AITessera 토큰 검증 방식은 `JWT_VERIFY_ALGOS`(기본 `HS256,RS256`)로 제어한다.
-- `JWT_PUBLIC_KEY_PATH` — RS256 검증용 AITessera **공개키(PEM)** 경로. AITessera 의 `jwt:keygen` 으로 생성한 공개키만 배치한다(개인키 금지).
+- `JWT_PUBLIC_KEY_PATH` — RS256 검증용 AITessera **공개키(PEM)** 경로. AITessera 의 `jwt:keygen` 으로 생성한 공개키만 배치한다(개인키 금지). **반드시 절대경로**로 설정한다 — 웹 요청의 PHP 작업 디렉터리는 `public/`이라, 상대경로는 SSH 셸에서 보이는 것과 실제 요청이 찾는 경로가 달라져 읽기 오류가 난다.
 - `JWT_SECRET` — HS256 검증용 공유 시크릿(전환기 한정, AITessera 서명키와 동일). RS256 단독 전환 후 `JWT_VERIFY_ALGOS=RS256` 으로 좁히면 불필요.
 - `LICENSE_TOKEN_SECRET` — 자체 발급 토큰(플로팅 활성화 등)용 HS256 시크릿. 미설정 시 `JWT_SECRET` 폴백.
 
@@ -159,9 +159,10 @@ php spark db:seed DemoSeeder     # 대행사(user_id=2)·고객(user_id=3) + 샘
    ```env
    aitessera.baseURL = http://127.0.0.1:9300
 
-   # RS256 (권장) — AITessera 의 jwt:keygen 공개키(PEM)만 배치
+   # RS256 (권장) — AITessera 의 jwt:keygen 공개키(PEM)만 배치. 경로는 반드시 절대경로로
+   # 지정한다(웹 요청의 PHP cwd 는 public/ 이라 상대경로는 실제 요청에서 못 찾는다).
    JWT_VERIFY_ALGOS    = HS256,RS256          # 전환기: 둘 다 허용 → 완료 후 RS256
-   JWT_PUBLIC_KEY_PATH = writable/keys/aitessera_public.pem
+   JWT_PUBLIC_KEY_PATH = /absolute/path/to/AILicet/writable/keys/aitessera_public.pem
 
    # HS256 (전환기·레거시) — AITessera 서명키와 동일한 값
    JWT_SECRET          = <AITessera 와 동일한 시크릿>

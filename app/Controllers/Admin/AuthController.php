@@ -59,7 +59,12 @@ final class AuthController extends BaseAdminController
             }
         } catch (DomainException $e) {
             return $this->renderLoginError($e->getMessage());
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            log_message('error', 'AITessera 로그인 실패: {class} - {message}', [
+                'class'   => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
             return $this->renderLoginError('인증 서버와 통신할 수 없습니다.');
         }
 
