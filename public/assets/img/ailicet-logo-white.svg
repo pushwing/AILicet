@@ -1,0 +1,12 @@
+<svg width="340" height="90" viewBox="0 0 340 90" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AILicet">
+  <!-- 마크: 다크 배경(사이드바)용 — 배경과 섞이지 않게 단색 + 얇은 테두리 -->
+  <g transform="translate(0,3)">
+    <polygon points="40,0 74,20 74,60 40,80 6,60 6,20" fill="#1D9E75" stroke="#DCEAE4" stroke-width="1.5"/>
+    <path d="M24,41 L35,52 L58,27" fill="none" stroke="#FFFFFF" stroke-width="7.2"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- 워드마크 -->
+  <text x="98" y="58" font-family="'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif"
+        font-size="40" font-weight="800" letter-spacing="-0.5" fill="#FFFFFF">AILicet</text>
+</svg>

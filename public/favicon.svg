@@ -1,0 +1,17 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AILicet">
+  <defs>
+    <linearGradient id="sealGradient" x1="14" y1="8" x2="86" y2="92" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1D9E75"/>
+      <stop offset="1" stop-color="#0A5241"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 인허가 인장(seal) 형태의 육각형 뱃지 -->
+  <polygon points="50,6 88.7,28 88.7,72 50,94 11.3,72 11.3,28"
+           fill="url(#sealGradient)"/>
+
+  <!-- 체크마크 = 인증/검증 완료 -->
+  <path d="M30 51 L44 65 L72 34"
+        fill="none" stroke="#FFFFFF" stroke-width="9"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

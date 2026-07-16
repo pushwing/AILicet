@@ -3,7 +3,7 @@
 <?= $this->section('content') ?>
 <div class="auth-card">
     <div class="auth-card__brand">
-        <span class="auth-card__brand-mark">A</span> AILicet
+        <img class="auth-card__brand-mark" src="<?= base_url('assets/img/ailicet-mark.svg') ?>" width="34" height="34" alt=""> AILicet
     </div>
     <p class="auth-card__sub">라이선스 관리 콘솔 로그인</p>
 
