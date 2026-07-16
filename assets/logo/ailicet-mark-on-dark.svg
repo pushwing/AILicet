@@ -1,0 +1,8 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AILicet">
+  <!-- 다크 배경(사이드바 등)용 — 배경(#0A5241)과 섞이지 않도록 단색 + 얇은 라이트 테두리 -->
+  <polygon points="50,6 88.7,28 88.7,72 50,94 11.3,72 11.3,28"
+           fill="#1D9E75" stroke="#DCEAE4" stroke-width="1.8"/>
+  <path d="M30 51 L44 65 L72 34"
+        fill="none" stroke="#FFFFFF" stroke-width="9"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

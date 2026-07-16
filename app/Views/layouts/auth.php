@@ -12,6 +12,9 @@ $title = $title ?? '로그인';
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= esc($title) ?> · AILicet</title>
+    <link rel="icon" type="image/svg+xml" href="<?= base_url('favicon.svg') ?>">
+    <link rel="alternate icon" href="<?= base_url('favicon.ico') ?>">
+    <link rel="apple-touch-icon" href="<?= base_url('apple-touch-icon.png') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/css/aicura.css') ?>">
 </head>
 <body>
