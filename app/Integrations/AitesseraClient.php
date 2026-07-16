@@ -14,6 +14,9 @@ use App\Exceptions\AitesseraException;
  */
 class AitesseraClient
 {
+    /** AILicet 제품군(affiliation) 식별자 — AITessera 로그인·계정생성 요청에 함께 보낸다. */
+    public const string AFFILIATION = 'ailicet';
+
     public function __construct(private readonly string $baseUrl)
     {
     }
@@ -21,6 +24,45 @@ class AitesseraClient
     public function isConfigured(): bool
     {
         return $this->baseUrl !== '';
+    }
+
+    /**
+     * 이메일·비밀번호·소속(affiliation)으로 로그인해 Access/Refresh 토큰을 발급받는다
+     * (공개 엔드포인트, 인증 헤더 불필요).
+     *
+     * @return array{access_token: string, refresh_token: ?string}|null 자격증명 불일치 등 비2xx 응답이면 null
+     *
+     * @throws AitesseraException AITessera 가 설정되지 않음
+     */
+    public function login(string $email, string $password, string $affiliation): ?array
+    {
+        if (! $this->isConfigured()) {
+            throw new AitesseraException('AITessera 가 설정되지 않았습니다.', 'AITESSERA_NOT_CONFIGURED', 503);
+        }
+
+        $response = service('curlrequest')->request('POST', rtrim($this->baseUrl, '/') . '/api/v1/tokens', [
+            'json'        => ['email' => $email, 'password' => $password, 'affiliation' => $affiliation],
+            'timeout'     => 5,
+            'http_errors' => false,
+        ]);
+
+        // AITessera 토큰 발급은 201(Created)을 반환한다. 2xx 를 성공으로 처리.
+        if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
+            return null;
+        }
+
+        $body  = json_decode((string) $response->getBody(), true);
+        $token = is_array($body) ? $this->extractToken($body) : null;
+        if ($token === null) {
+            return null;
+        }
+
+        $data = is_array($body['data'] ?? null) ? $body['data'] : $body;
+
+        return [
+            'access_token'  => $token,
+            'refresh_token' => isset($data['refresh_token']) ? (string) $data['refresh_token'] : null,
+        ];
     }
 
     /**
@@ -156,5 +198,22 @@ class AitesseraClient
         }
 
         return $body;
+    }
+
+    /**
+     * 응답 본문에서 Access Token 문자열을 찾는다(래핑 형태 방어).
+     *
+     * @param array<string, mixed> $body
+     */
+    private function extractToken(array $body): ?string
+    {
+        $data = is_array($body['data'] ?? null) ? $body['data'] : $body;
+        foreach (['access_token', 'accessToken', 'token'] as $key) {
+            if (isset($data[$key]) && is_string($data[$key]) && $data[$key] !== '') {
+                return $data[$key];
+            }
+        }
+
+        return null;
     }
 }

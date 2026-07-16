@@ -7,6 +7,7 @@ namespace App\Controllers\Admin;
 use App\Controllers\BaseAdminController;
 use App\Enums\UserRole;
 use App\Exceptions\DomainException;
+use App\Integrations\AitesseraClient;
 use CodeIgniter\HTTP\RedirectResponse;
 use Throwable;
 
@@ -51,7 +52,7 @@ final class AuthController extends BaseAdminController
 
         try {
             if ($base !== '') {
-                $authUser = $this->authenticateWithAitessera($base, $email, $password);
+                $authUser = $this->authenticateWithAitessera($email, $password);
             } elseif (ENVIRONMENT === 'development') {
                 $authUser = $this->demoUser($email);
             } else {
@@ -90,53 +91,23 @@ final class AuthController extends BaseAdminController
      *
      * @return array{id:int, name:string, role:int, aff:?string, token:string, refresh:?string}|null
      */
-    private function authenticateWithAitessera(string $base, string $email, string $password): ?array
+    private function authenticateWithAitessera(string $email, string $password): ?array
     {
-        $response = service('curlrequest')->post(rtrim($base, '/') . '/api/v1/tokens', [
-            'json'        => ['email' => $email, 'password' => $password],
-            'timeout'     => 5,
-            'http_errors' => false,
-        ]);
-
-        // AITessera 토큰 발급은 201(Created)을 반환한다. 2xx 를 성공으로 처리.
-        if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
+        $pair = service('aitesseraClient')->login($email, $password, AitesseraClient::AFFILIATION);
+        if ($pair === null) {
             return null;
         }
 
-        $body  = json_decode((string) $response->getBody(), true);
-        $token = is_array($body) ? $this->extractToken($body) : null;
-        if ($token === null) {
-            return null;
-        }
-
-        $claims = service('aitesseraToken')->decode($token); // 서명·만료 검증(RS256/HS256)
-        $data   = is_array($body['data'] ?? null) ? $body['data'] : $body;
+        $claims = service('aitesseraToken')->decode($pair['access_token']); // 서명·만료 검증(RS256/HS256)
 
         return [
             'id'      => (int) ($claims['sub'] ?? 0),
             'name'    => $email,
             'role'    => (int) ($claims['role'] ?? UserRole::Member->value),
             'aff'     => isset($claims['aff']) ? (string) $claims['aff'] : null,
-            'token'   => $token, // AITessera 운영자 API 호출용 액세스 토큰
-            'refresh' => isset($data['refresh_token']) ? (string) $data['refresh_token'] : null, // 자동 갱신용
+            'token'   => $pair['access_token'], // AITessera 운영자 API 호출용 액세스 토큰
+            'refresh' => $pair['refresh_token'], // 자동 갱신용
         ];
-    }
-
-    /**
-     * 응답 본문에서 Access Token 문자열을 찾는다(래핑 형태 방어).
-     *
-     * @param array<string, mixed> $body
-     */
-    private function extractToken(array $body): ?string
-    {
-        $data = is_array($body['data'] ?? null) ? $body['data'] : $body;
-        foreach (['access_token', 'accessToken', 'token'] as $key) {
-            if (isset($data[$key]) && is_string($data[$key]) && $data[$key] !== '') {
-                return $data[$key];
-            }
-        }
-
-        return null;
     }
 
     /**
@@ -154,7 +125,7 @@ final class AuthController extends BaseAdminController
             default                           => [1, UserRole::Operator],
         };
 
-        return ['id' => $id, 'name' => $email, 'role' => $role->value, 'aff' => 'ailicet'];
+        return ['id' => $id, 'name' => $email, 'role' => $role->value, 'aff' => AitesseraClient::AFFILIATION];
     }
 
     private function renderLoginError(string $message): string

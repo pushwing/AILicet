@@ -65,4 +65,39 @@ final class AitesseraClientTest extends CIUnitTestCase
         $this->expectException(AitesseraException::class);
         (new AitesseraClient(''))->listUsers('tok', []);
     }
+
+    public function testLoginSendsAffiliationAndReturnsTokens(): void
+    {
+        $this->fakeCurl(201, json_encode([
+            'status' => 'success',
+            'data'   => ['access_token' => 'abc.def.ghi', 'refresh_token' => 'rt-1'],
+        ]) ?: '');
+
+        $pair = (new AitesseraClient('http://aitessera'))->login('a@n.com', 'secret', AitesseraClient::AFFILIATION);
+
+        $this->assertSame('abc.def.ghi', $pair['access_token']);
+        $this->assertSame('rt-1', $pair['refresh_token']);
+        $this->assertSame('POST', $this->lastCurlRequest['method']);
+        $this->assertSame('a@n.com', $this->lastCurlRequest['options']['json']['email']);
+        $this->assertSame('secret', $this->lastCurlRequest['options']['json']['password']);
+        $this->assertSame(AitesseraClient::AFFILIATION, $this->lastCurlRequest['options']['json']['affiliation']);
+    }
+
+    public function testLoginReturnsNullOnNon2xxResponse(): void
+    {
+        $this->fakeCurl(422, json_encode(['status' => 'error', 'code' => 'VALIDATION_ERROR', 'message' => 'affiliation은 필수입니다']) ?: '');
+
+        $pair = (new AitesseraClient('http://aitessera'))->login('a@n.com', 'secret', 'ailicet');
+
+        $this->assertNull($pair);
+    }
+
+    public function testLoginReturnsNullWhenTokenMissing(): void
+    {
+        $this->fakeCurl(200, json_encode(['status' => 'success', 'data' => []]) ?: '');
+
+        $pair = (new AitesseraClient('http://aitessera'))->login('a@n.com', 'secret', 'ailicet');
+
+        $this->assertNull($pair);
+    }
 }
