@@ -20,9 +20,21 @@ final class AuthLoginTest extends CIUnitTestCase
 
     private const string SECRET = 'auth-login-test-secret-0123456789ab';
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // 로컬 .env 는 커밋되지 않아 CI 에는 aitessera.baseURL 이 비어 있다(AITessera 미설정) —
+        // 실제 로그인 분기(authenticateWithAitessera)를 항상 태우도록 테스트에서 명시 설정한다.
+        putenv('aitessera.baseURL=http://aitessera');
+        $_ENV['aitessera.baseURL']    = 'http://aitessera';
+        $_SERVER['aitessera.baseURL'] = 'http://aitessera';
+    }
+
     protected function tearDown(): void
     {
         parent::tearDown();
+        putenv('aitessera.baseURL');
+        unset($_ENV['aitessera.baseURL'], $_SERVER['aitessera.baseURL']);
         \App\Libraries\Auth::clear();
     }
 
