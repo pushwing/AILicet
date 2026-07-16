@@ -69,14 +69,13 @@ database.tests.port = 3306
 # logger.threshold = 4
 
 #--------------------------------------------------------------------
-# JWT — AITessera 토큰 검증 (RS256 비대칭키 전환)
+# JWT — AITessera 토큰 검증 (RS256)
 #--------------------------------------------------------------------
-# 검증 허용 알고리즘. 전환기에는 두 알고리즘을 모두 허용하고, AITessera 가
-# RS256 로 완전 전환 + 기존 HS256 토큰 만료 후 'RS256' 으로 좁힌다.
-JWT_VERIFY_ALGOS = 'HS256,RS256'
+# 검증 허용 알고리즘.
+JWT_VERIFY_ALGOS = 'RS256'
 
-# HS256 검증용 공유 시크릿(전환기 한정 — 32자 이상, AITessera 서명키와 동일 값).
-# JWT_VERIFY_ALGOS 에서 HS256 제거 시 불필요.
+# HS256 공유 시크릿(32자 이상). JWT_VERIFY_ALGOS 에 HS256 을 추가할 때만 필요하며,
+# 아래 LICENSE_TOKEN_SECRET 미설정 시 폴백 값으로도 쓰인다.
 JWT_SECRET = 'change-me-to-a-random-32+-char-secret'
 
 # RS256 검증용 AITessera 공개키(PEM) 파일 경로. AITessera 의 `jwt:keygen` 으로
