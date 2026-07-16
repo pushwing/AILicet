@@ -25,6 +25,8 @@ jobs:
 
     steps:
       - name: 프로덕션 서버 배포 (SSH)
+        id: deploy
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.2.0
         env:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
@@ -74,3 +76,25 @@ jobs:
             sudo -n systemctl reload apache2
 
             echo "✅ 배포 완료: $(git rev-parse --short HEAD)"
+
+      - name: 배포 결과 슬랙 알림
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          DEPLOY_REF: ${{ github.event.inputs.ref || github.sha }}
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          DEPLOY_ACTOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$DEPLOY_OUTCOME" = "success" ]; then
+            EMOJI="✅"; STATUS_TEXT="배포 성공"
+          else
+            EMOJI="❌"; STATUS_TEXT="배포 실패"
+          fi
+          MESSAGE="${EMOJI} [AILicet] ${STATUS_TEXT} — ${DEPLOY_REF} · ${DEPLOY_ACTOR} · ${RUN_URL}"
+          PAYLOAD="$(jq -n --arg text "$MESSAGE" '{text: $text}')"
+          curl -sS -X POST -H 'Content-Type: application/json' --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
+
+      - name: 배포 실패 시 job 실패 처리
+        if: steps.deploy.outcome == 'failure'
+        run: exit 1
