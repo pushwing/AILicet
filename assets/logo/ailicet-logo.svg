@@ -1,0 +1,19 @@
+<svg width="340" height="90" viewBox="0 0 340 90" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AILicet">
+  <defs>
+    <linearGradient id="sealGradient" x1="0" y1="0" x2="80" y2="90" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1D9E75"/>
+      <stop offset="1" stop-color="#0A5241"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 마크: 인허가 인장(seal) + 체크(검증) -->
+  <g transform="translate(0,3)">
+    <polygon points="40,0 74,20 74,60 40,80 6,60 6,20" fill="url(#sealGradient)"/>
+    <path d="M24,41 L35,52 L58,27" fill="none" stroke="#FFFFFF" stroke-width="7.2"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- 워드마크 -->
+  <text x="98" y="58" font-family="'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif"
+        font-size="40" font-weight="800" letter-spacing="-0.5" fill="#0A5241">AILicet</text>
+</svg>

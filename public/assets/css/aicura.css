@@ -82,10 +82,7 @@ a:hover { text-decoration: underline; }
 }
 .sidebar__brand-mark {
     width: 28px; height: 28px;
-    display: grid; place-items: center;
-    background: var(--color-secondary);
-    border-radius: 8px;
-    font-size: 15px;
+    display: block;
 }
 .sidebar__role {
     padding: 12px 20px 6px;
@@ -270,9 +267,8 @@ a:hover { text-decoration: underline; }
     margin-bottom: 4px;
 }
 .auth-card__brand-mark {
-    width: 34px; height: 34px; border-radius: 9px;
-    background: var(--color-primary); color: #fff;
-    display: grid; place-items: center; font-size: 17px;
+    width: 34px; height: 34px;
+    display: block;
 }
 .auth-card__sub { color: var(--color-text-muted); margin: 0 0 24px; font-size: 13px; }
 

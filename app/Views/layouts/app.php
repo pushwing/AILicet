@@ -60,6 +60,9 @@ foreach ($menus as $m) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= esc($title) ?> · AILicet</title>
+    <link rel="icon" type="image/svg+xml" href="<?= base_url('favicon.svg') ?>">
+    <link rel="alternate icon" href="<?= base_url('favicon.ico') ?>">
+    <link rel="apple-touch-icon" href="<?= base_url('apple-touch-icon.png') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/css/aicura.css') ?>">
     <?= $this->renderSection('head') ?>
 </head>
@@ -67,7 +70,7 @@ foreach ($menus as $m) {
 <div class="app-shell">
     <aside class="sidebar">
         <div class="sidebar__brand">
-            <span class="sidebar__brand-mark">A</span> AILicet
+            <img class="sidebar__brand-mark" src="<?= base_url('assets/img/ailicet-mark-on-dark.svg') ?>" width="28" height="28" alt=""> AILicet
         </div>
         <div class="sidebar__role"><?= esc($roleLabel) ?> 콘솔</div>
         <nav class="sidebar__nav">
