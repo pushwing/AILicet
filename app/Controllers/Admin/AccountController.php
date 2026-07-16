@@ -7,6 +7,7 @@ namespace App\Controllers\Admin;
 use App\Controllers\BaseAdminController;
 use App\Enums\UserRole;
 use App\Exceptions\AitesseraException;
+use App\Integrations\AitesseraClient;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -171,7 +172,7 @@ final class AccountController extends BaseAdminController
             return redirect()->to('/admin/accounts');
         }
 
-        $aff = (string) (session()->get('authUser')['aff'] ?? 'ailicet');
+        $aff = (string) (session()->get('authUser')['aff'] ?? AitesseraClient::AFFILIATION);
         try {
             service('aitesseraClient')->createAccount($token, [
                 'email'       => (string) $this->request->getPost('email'),

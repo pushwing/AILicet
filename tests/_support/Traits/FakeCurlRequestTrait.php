@@ -17,6 +17,13 @@ use Config\App;
 trait FakeCurlRequestTrait
 {
     /**
+     * 마지막 request() 호출의 method/url/options — 요청 바디(affiliation 등) 검증용.
+     *
+     * @var array{method: string, url: string, options: array<string, mixed>}|null
+     */
+    protected ?array $lastCurlRequest = null;
+
+    /**
      * 지정한 상태코드·본문을 반환하는 가짜 curlrequest 를 주입한다.
      */
     protected function fakeCurl(int $status, string $body): void
@@ -25,8 +32,12 @@ trait FakeCurlRequestTrait
             ->setStatusCode($status)
             ->setBody($body);
 
-        $fake = new class ($response) {
-            public function __construct(private readonly Response $response)
+        $capture = function (string $method, string $url, array $options): void {
+            $this->lastCurlRequest = ['method' => $method, 'url' => $url, 'options' => $options];
+        };
+
+        $fake = new class ($response, $capture) {
+            public function __construct(private readonly Response $response, private readonly \Closure $capture)
             {
             }
 
@@ -35,6 +46,8 @@ trait FakeCurlRequestTrait
              */
             public function request(string $method, string $url, array $options = []): Response
             {
+                ($this->capture)($method, $url, $options);
+
                 return $this->response;
             }
         };
