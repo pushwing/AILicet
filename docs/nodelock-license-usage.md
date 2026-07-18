@@ -167,6 +167,10 @@ function verifyLicenseFile(fileText, publicKeyBytes, localHostId, today):
 - 인증: 모든 엔드포인트는 `Authorization: Bearer <JWT>` 필요.
 - 경로 정의: [`frontapi/src/Routes.php`](../frontapi/src/Routes.php)
 
+> 아래 엔드포인트는 **AITessera 포털 세션(JWT)** 을 가진 호출자용이다. 로그인 세션이
+> 없는 독립 데스크톱 도구(`tools/licverify`, 내부 테스트용)는 **무인증** 버전인
+> `POST /api/v1/nodelock/verify`(§5.4), `POST /api/v1/floating/verify`(§5.4)를 사용한다.
+
 ### 5.1 유효성 검증 — `POST /api/v1/licenses/effectiveness`
 
 노드락의 **실시간 유효성**을 판정한다(상태·만료·호스트 바인딩·키 폐기 여부).
@@ -207,6 +211,20 @@ function verifyLicenseFile(fileText, publicKeyBytes, localHostId, today):
 ### 5.3 사용정보 수집 — `POST /api/v1/licenses/bypass`
 
 검증과 별개로, 사용 로그를 서버 원시 로그로 적재하는 텔레메트리 엔드포인트(선택).
+
+### 5.4 데스크톱 도구용 무인증 확인 (내부 테스트용)
+
+`tools/licverify`(내부 테스트용 데스크톱 앱)처럼 로그인 세션이 없는 독립 클라이언트를
+위한 경로다. **인증 헤더가 필요 없다** — license_key(+host_id)가 사실상의 조회 키이며,
+`RateLimitMiddleware`(IP+path 기준)가 무차별 대입을 억제한다.
+
+| 라우트 | 요청 | 응답 | 대응하는 포털용 엔드포인트 |
+|---|---|---|---|
+| `POST /api/v1/nodelock/verify` | `{license_key, host_id}` | §5.1과 동일 | `/api/v1/licenses/effectiveness` |
+| `POST /api/v1/floating/verify` | `{license_key}` | 플로팅 valid/remaining | `/api/v1/floating/effectiveness` |
+
+> 이 경로는 배포용 고객 도구가 아니라 **내부 테스트 목적**으로 추가되었다. 실제 고객
+> 배포 시에는 별도 인증·서명·배포 파이프라인 검토가 필요하다.
 
 ---
 
