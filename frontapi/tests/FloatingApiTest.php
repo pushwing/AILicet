@@ -80,10 +80,12 @@ final class FloatingApiTest extends TestCase
      *
      * @return array<string, mixed>
      */
-    private function call(string $path, array $body): array
+    private function call(string $path, array $body, bool $auth = true): array
     {
-        $req = (new Psr17Factory())->createServerRequest('POST', $path, ['REMOTE_ADDR' => '127.0.0.1'])
-            ->withHeader('Authorization', 'Bearer ' . $this->token);
+        $req = (new Psr17Factory())->createServerRequest('POST', $path, ['REMOTE_ADDR' => '127.0.0.1']);
+        if ($auth) {
+            $req = $req->withHeader('Authorization', 'Bearer ' . $this->token);
+        }
         $req->getBody()->write((string) json_encode($body));
 
         $res  = $this->app->handle($req);
@@ -197,6 +199,22 @@ final class FloatingApiTest extends TestCase
     public function testInvalidKey(): void
     {
         $r = $this->call('/api/v1/floating/effectiveness', ['license_key' => 'NOPE']);
+        $this->assertSame('INVALID_LICENSE_KEY', $r['body']['data']['reason']);
+    }
+
+    public function testPublicVerifyEndpointWorksWithoutAuth(): void
+    {
+        $r = $this->call('/api/v1/floating/verify', ['license_key' => 'KEY-F1'], false);
+
+        $this->assertSame(200, $r['status']);
+        $this->assertTrue($r['body']['data']['valid']);
+        $this->assertSame(100, $r['body']['data']['remaining']['credit']);
+    }
+
+    public function testPublicVerifyEndpointInvalidKeyWithoutAuth(): void
+    {
+        $r = $this->call('/api/v1/floating/verify', ['license_key' => 'NOPE'], false);
+
         $this->assertSame('INVALID_LICENSE_KEY', $r['body']['data']['reason']);
     }
 }

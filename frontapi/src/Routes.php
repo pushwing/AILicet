@@ -11,6 +11,7 @@ use App\Controller\BypassController;
 use App\Controller\DocsController;
 use App\Controller\EffectivenessController;
 use App\Controller\FloatingEffectivenessController;
+use App\Controller\FloatingVerifyController;
 use App\Controller\HealthController;
 use App\Controller\LicenseInfoController;
 use App\Controller\LogController;
@@ -42,6 +43,7 @@ function routes(): array
         // 플로팅 인증
         ['POST', '/api/v1/floating/activation', ActivationController::class],
         ['POST', '/api/v1/floating/effectiveness', FloatingEffectivenessController::class],
+        ['POST', '/api/v1/floating/verify', FloatingVerifyController::class],
         ['POST', '/api/v1/floating/analysis/start', AnalysisStartController::class],
         ['POST', '/api/v1/floating/analysis/end', AnalysisEndController::class],
 
