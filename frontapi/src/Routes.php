@@ -11,9 +11,11 @@ use App\Controller\BypassController;
 use App\Controller\DocsController;
 use App\Controller\EffectivenessController;
 use App\Controller\FloatingEffectivenessController;
+use App\Controller\FloatingVerifyController;
 use App\Controller\HealthController;
 use App\Controller\LicenseInfoController;
 use App\Controller\LogController;
+use App\Controller\NodeLockVerifyController;
 use App\Controller\OpenApiController;
 use App\Controller\PingController;
 
@@ -36,10 +38,12 @@ function routes(): array
         ['POST', '/api/v1/licenses/info', LicenseInfoController::class],
         ['POST', '/api/v1/licenses/effectiveness', EffectivenessController::class],
         ['POST', '/api/v1/licenses/bypass', BypassController::class],
+        ['POST', '/api/v1/nodelock/verify', NodeLockVerifyController::class],
 
         // 플로팅 인증
         ['POST', '/api/v1/floating/activation', ActivationController::class],
         ['POST', '/api/v1/floating/effectiveness', FloatingEffectivenessController::class],
+        ['POST', '/api/v1/floating/verify', FloatingVerifyController::class],
         ['POST', '/api/v1/floating/analysis/start', AnalysisStartController::class],
         ['POST', '/api/v1/floating/analysis/end', AnalysisEndController::class],
 

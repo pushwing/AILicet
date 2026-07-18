@@ -25,6 +25,8 @@ final class JwtAuthMiddleware implements MiddlewareInterface
         ['GET', '/health'],
         ['GET', '/api/docs'],
         ['GET', '/api/v1/openapi.json'],
+        ['POST', '/api/v1/nodelock/verify'],
+        ['POST', '/api/v1/floating/verify'],
     ];
 
     public function __construct(private readonly Jwt $jwt)
