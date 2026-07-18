@@ -205,4 +205,22 @@ final class NodeLockApiTest extends TestCase
         $this->assertSame(422, $res->getStatusCode());
         $this->assertSame('VALIDATION_ERROR', $this->data($res)['code']);
     }
+
+    public function testPublicVerifyEndpointWorksWithoutAuth(): void
+    {
+        $res  = $this->post('/api/v1/nodelock/verify', ['license_key' => 'KEY-A1', 'host_id' => 'HOST-A'], false);
+        $body = $this->data($res);
+
+        $this->assertSame(200, $res->getStatusCode());
+        $this->assertTrue($body['data']['valid']);
+        $this->assertSame('OK', $body['data']['reason']);
+    }
+
+    public function testPublicVerifyEndpointHostMismatchWithoutAuth(): void
+    {
+        $body = $this->data($this->post('/api/v1/nodelock/verify', ['license_key' => 'KEY-A1', 'host_id' => 'WRONG'], false));
+
+        $this->assertFalse($body['data']['valid']);
+        $this->assertSame('HOST_MISMATCH', $body['data']['reason']);
+    }
 }
