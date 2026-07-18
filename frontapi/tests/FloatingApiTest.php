@@ -217,4 +217,11 @@ final class FloatingApiTest extends TestCase
 
         $this->assertSame('INVALID_LICENSE_KEY', $r['body']['data']['reason']);
     }
+
+    public function testPortalEffectivenessStillRequiresAuth(): void
+    {
+        $r = $this->call('/api/v1/floating/effectiveness', ['license_key' => 'KEY-F1'], false);
+
+        $this->assertSame(401, $r['status']);
+    }
 }

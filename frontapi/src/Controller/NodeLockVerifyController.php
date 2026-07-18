@@ -27,7 +27,7 @@ final class NodeLockVerifyController
     ) {
     }
 
-    #[OA\Post(path: '/api/v1/nodelock/verify', summary: '노드락 유효성 확인(무인증, 데스크톱 도구용)', tags: ['License'], responses: [
+    #[OA\Post(path: '/api/v1/nodelock/verify', summary: '노드락 유효성 확인(무인증, 데스크톱 도구용)', security: [], tags: ['License'], responses: [
         new OA\Response(response: 200, description: '유효성 결과(valid/reason)'),
         new OA\Response(response: 422, description: '필수 파라미터 누락'),
     ])]

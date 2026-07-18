@@ -25,7 +25,7 @@ final class FloatingVerifyController
     ) {
     }
 
-    #[OA\Post(path: '/api/v1/floating/verify', summary: '플로팅 유효성 확인(무인증, 데스크톱 도구용)', tags: ['Floating'], responses: [
+    #[OA\Post(path: '/api/v1/floating/verify', summary: '플로팅 유효성 확인(무인증, 데스크톱 도구용)', security: [], tags: ['Floating'], responses: [
         new OA\Response(response: 200, description: '유효성 결과(valid/remaining)'),
         new OA\Response(response: 422, description: '필수 파라미터 누락'),
     ])]
