@@ -15,7 +15,7 @@ const publicKeyB64 = "REPLACE_WITH_ACTUAL_PUBLIC_KEY_BASE64"
 const baseURL = "http://localhost:8080"
 
 func main() {
-	a := app.New()
+	a := app.NewWithID("com.aicura.licverify")
 	w := ui.BuildWindow(a, publicKeyB64, baseURL)
 	w.ShowAndRun()
 }
