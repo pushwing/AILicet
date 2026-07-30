@@ -31,13 +31,16 @@ jobs:
       - name: MySQL 컨테이너 기동
         run: |
           docker rm -f ci-mysql-backend-${{ github.run_id }} 2>/dev/null || true
-          # 이 러너에는 시스템 MySQL(mysqld)이 이미 3306을 상시 점유하고 있어
-          # CI 전용 포트(13306)로 띄운다.
+          # 이 Mac은 여러 저장소가 self-hosted 러너를 공유해서 고정 포트를 쓰면
+          # 다른 저장소의 CI 컨테이너와 충돌할 수 있다. 도커가 골라주는 임의의
+          # 빈 호스트 포트를 쓰고, 실제 배정된 포트를 GITHUB_ENV 로 넘긴다.
           docker run -d --name ci-mysql-backend-${{ github.run_id }} \
             -e MYSQL_ROOT_PASSWORD=root \
             -e MYSQL_DATABASE=aicura_test \
-            -p 13306:3306 \
+            -p 127.0.0.1::3306 \
             mysql:8.0
+          port=$(docker inspect ci-mysql-backend-${{ github.run_id }} --format '{{ (index (index .NetworkSettings.Ports "3306/tcp") 0).HostPort }}')
+          echo "CI_MYSQL_PORT=$port" >> "$GITHUB_ENV"
           for i in $(seq 1 30); do
             docker exec ci-mysql-backend-${{ github.run_id }} mysqladmin ping -proot --silent && break
             sleep 2
@@ -69,10 +72,10 @@ jobs:
           sed -i '' "s|^database.default.hostname = .*|database.default.hostname = 127.0.0.1|" .env
           sed -i '' "s|^database.default.database = .*|database.default.database = aicura_test|" .env
           sed -i '' "s|^database.default.password =.*|database.default.password = root|" .env
-          sed -i '' "s|^database.default.port = .*|database.default.port = 13306|" .env
+          sed -i '' "s|^database.default.port = .*|database.default.port = ${{ env.CI_MYSQL_PORT }}|" .env
           sed -i '' "s|^database.tests.hostname = .*|database.tests.hostname = 127.0.0.1|" .env
           sed -i '' "s|^database.tests.password =.*|database.tests.password = root|" .env
-          sed -i '' "s|^database.tests.port = .*|database.tests.port = 13306|" .env
+          sed -i '' "s|^database.tests.port = .*|database.tests.port = ${{ env.CI_MYSQL_PORT }}|" .env
           sed -i '' "s|^JWT_SECRET = .*|JWT_SECRET = ci-test-secret-key-01234567890123456789|" .env
 
       - name: writable 디렉토리 보장
@@ -106,12 +109,15 @@ jobs:
         working-directory: .
         run: |
           docker rm -f ci-mysql-frontapi-${{ github.run_id }} 2>/dev/null || true
-          # backend 잡과 동시에 돌 수 있어 다른 호스트 포트(23306)를 쓴다.
+          # backend 잡·다른 저장소의 CI 와 동시에 돌 수 있어 고정 포트 대신
+          # 도커가 골라주는 임의의 빈 호스트 포트를 쓴다.
           docker run -d --name ci-mysql-frontapi-${{ github.run_id }} \
             -e MYSQL_ROOT_PASSWORD=root \
             -e MYSQL_DATABASE=ailicet \
-            -p 23306:3306 \
+            -p 127.0.0.1::3306 \
             mysql:8.0
+          port=$(docker inspect ci-mysql-frontapi-${{ github.run_id }} --format '{{ (index (index .NetworkSettings.Ports "3306/tcp") 0).HostPort }}')
+          echo "CI_MYSQL_PORT=$port" >> "$GITHUB_ENV"
           for i in $(seq 1 30); do
             docker exec ci-mysql-frontapi-${{ github.run_id }} mysqladmin ping -proot --silent && break
             sleep 2
@@ -132,7 +138,7 @@ jobs:
       - name: PHPUnit
         env:
           DB_HOST: 127.0.0.1
-          DB_PORT: '23306'
+          DB_PORT: ${{ env.CI_MYSQL_PORT }}
           DB_NAME: ailicet
           DB_USER: root
           DB_PASS: root
