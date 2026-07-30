@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# 검증 게이트 — 로컬에서 끝낸다.
+#   - main 직접 push: 무조건 차단 (배포는 dev → main PR/merge commit 으로만)
+#   - dev push: composer ci(루트) + frontapi composer check 필수, 실패 시 push 중단
+#   - feature/* push: 빠른 반복을 막지 않기 위해 검증하지 않는다
+#   - 문서 전용 변경(*.md, docs/**, .claude/rules/**): 비교 대상 코드가 없으므로 검증을 건너뛴다
+#   - PHP/Composer 미설치 환경: 검증을 건너뛰고 CI(main PR)에서 최종 검증
+# 긴급 우회: SKIP_HOOKS=1 git push ...
+set -euo pipefail
+
+[ "${SKIP_HOOKS:-0}" = "1" ] && exit 0
+
+zero="0000000000000000000000000000000000000000"
+repo_root="$(git rev-parse --show-toplevel)"
+
+is_doc_only() {
+    local range="$1"
+    local files
+    files=$(git diff --name-only "$range" 2>/dev/null || true)
+    [ -z "$files" ] && return 1
+    ! echo "$files" | grep -qvE '(\.md$|^docs/|^\.claude/rules/)'
+}
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [ "$local_sha" = "$zero" ] && continue  # 브랜치 삭제 push
+
+    branch="${remote_ref#refs/heads/}"
+
+    if [ "$branch" = "main" ]; then
+        echo "❌ main 직접 push 금지 — 배포는 dev → main PR(merge commit)로만 합니다." >&2
+        exit 1
+    fi
+
+    if [ "$branch" != "dev" ]; then
+        continue
+    fi
+
+    if ! command -v composer >/dev/null 2>&1; then
+        echo "⚠️  composer 가 없어 로컬 검증을 건너뜁니다 (dev → main PR 의 CI 가 최종 검증합니다)." >&2
+        continue
+    fi
+
+    if [ "$remote_sha" != "$zero" ]; then
+        range="$remote_sha..$local_sha"
+        if is_doc_only "$range"; then
+            echo "📝 문서 전용 변경 — composer 검증을 건너뜁니다." >&2
+            continue
+        fi
+    fi
+
+    echo "🔍 dev 푸시 전 로컬 검증 실행 (composer ci)..." >&2
+    ( cd "$repo_root" && composer ci )
+
+    if [ -f "$repo_root/frontapi/composer.json" ]; then
+        echo "🔍 frontapi 로컬 검증 실행 (composer check)..." >&2
+        ( cd "$repo_root/frontapi" && composer check )
+    fi
+done
+
+exit 0

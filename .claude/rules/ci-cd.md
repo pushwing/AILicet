@@ -2,9 +2,56 @@
 
 > 이 문서는 `CLAUDE.md` 에서 `@.claude/rules/ci-cd.md` 로 로드된다.
 
+## 검증 게이트 — 어디서 무엇을 돌리는가
+
+**검증은 로컬에서 끝낸다.** `feature/*` → `dev` PR 에는 CI 를 걸지 않고, CI 는 `dev` → `main` 배포 PR 에서만 돈다.
+
+```
+feature/*  ──[로컬 검증: git hooks]──▶  dev  ──[PR + CI]──▶  main
+                    ↑                        ↑
+              여기가 실질적 게이트        여기서만 CI 가 돈다
+```
+
+| 시점 | 무엇을 | 누가 |
+|------|--------|------|
+| 개발 중 | `composer analyse` + PHPUnit 부분 실행 (DB 불필요 범위) | 사람 / Claude, 수시로 |
+| `dev` 푸시 전 | `composer ci`(루트) + `frontapi` `composer check` 필수 — 실패하면 푸시하지 않는다 | git hook(`pre-push`) 이 강제 |
+| `feature/*` → `dev` PR | CI 없음. 코드 리뷰만 | — |
+| `dev` → `main` PR | GitHub Actions 전체(`backend`·`frontapi` 잡: CS Fixer + PHPStan + PHPUnit) | CI |
+
+`feature → dev` 에 CI 가 없다는 건 `dev` 브랜치가 검증받지 않은 코드를 받을 수 있다는 뜻이다. 그 상태로 여러 기능이 쌓인 뒤 배포 PR 에서 처음 CI 가 돌면 어느 커밋이 깨뜨렸는지 찾는 비용이 커지고 배포가 막힌다. **로컬 검증이 유일한 방어선이므로 생략은 규칙 위반이다.** Claude 가 작업할 때도 동일 — `dev` 로 올리는 PR 을 만들기 전에 위 명령을 실제로 실행하고 출력을 확인한 다음 진행한다. "통과할 것 같다"로 넘어가지 않는다.
+
+### 훅으로 강제한다 — `.githooks/`
+
+로컬 검증을 사람 기억에만 맡기면 반드시 빠진다. 훅이 저장소에 커밋돼 있으니 클론 직후 1회 활성화한다.
+
+```bash
+git config core.hooksPath .githooks
+```
+
+| 훅 | 동작 |
+|----|------|
+| `pre-commit` | 스테이징된 `*.php` 를 PHP-CS-Fixer 로 자동 수정 후 재-스테이징. 커밋을 막지는 않는다 |
+| `pre-push` | 푸시 대상이 `dev` 일 때만 `composer ci`(루트) + `frontapi composer check` 실행. 실패 시 push 중단 |
+| `pre-push` | `main` 직접 푸시는 무조건 차단. 배포는 `dev → main` PR(merge commit)로만 |
+
+- `feature/*` 푸시는 검증하지 않는다 — 작업 중 빠른 반복을 막지 않기 위해서다.
+- 문서 전용 변경(`*.md`, `docs/**`, `.claude/rules/**` 만 바뀐 푸시)은 `pre-push` 가 비교 대상 코드가 없다고 판단해 `composer` 검증을 자동으로 건너뛴다. 코드가 한 줄이라도 섞이면 즉시 전체 검증으로 돌아간다.
+- 긴급 우회: `SKIP_HOOKS=1 git push ...`
+- PHP·Composer 가 없는 환경에서는 해당 검증을 건너뛰고 CI(배포 PR)가 최종 검증한다.
+- `git add -p` 로 부분 스테이징한 상태에서는 `pre-commit` 이 스테이징하지 않은 변경까지 커밋에 넣을 수 있다. 그때는 `SKIP_HOOKS=1` 을 쓴다.
+
 ## CI (GitHub Actions)
 
-`dev` · `main` 으로의 **push / PR** 마다 자동 검증된다. 정의: `.github/workflows/ci.yml` (단일 파일, `backend`·`frontapi` 두 잡 병렬). 각 잡은 자체 `mysql:8.0` 서비스 컨테이너를 띄운다.
+**배포 PR(`dev` → `main`)에서만** 자동 검증된다. 정의: `.github/workflows/ci.yml` (단일 파일, `backend`·`frontapi` 두 잡 병렬). 각 잡은 자체 `mysql:8.0` 서비스 컨테이너를 띄운다.
+
+```yaml
+on:
+  pull_request:
+    branches: [main]     # dev 로 가는 PR 에서는 돌지 않는다
+```
+
+`branches` 를 비워두거나 `dev` 를 추가하면 이 정책이 무의미해진다. `dev → main` 배포 PR 은 merge commit 으로 머지하므로(전역 규칙), CI 가 통과한 커밋 조합이 그대로 `main` 에 올라간다.
 
 - **동시성**: 같은 ref 새 푸시 시 진행 중 실행 취소 (`concurrency.cancel-in-progress`)
 
@@ -32,18 +79,18 @@
 4. MySQL 헬스 대기
 5. `composer test` (PHPUnit — DB 접속정보는 `DB_*` env 로 주입)
 
-### 푸시 전 로컬 사전 검증
+### 로컬 사전 검증 명령 (참고)
 
-CI 실패를 줄이기 위해 푸시 전 동일 검증을 로컬에서 수행한다.
+`dev` 푸시 전 검증은 위 `pre-push` 훅이 자동 실행하지만, 훅 없이 수동으로 돌릴 때는 동일 명령을 직접 실행한다.
 
 ```bash
 composer ci                        # = CS Fixer + analyse + test (루트 백엔드) — CI backend 잡과 동일 순서
 cd frontapi && composer check      # frontapi(pure PHP) — analyse + test
 ```
 
-> ⚠️ `composer check`(analyse+test)는 **CS Fixer를 포함하지 않아** 스타일 위반을 놓친다. CI backend 잡은 CS Fixer도 검사하므로, 푸시 전에는 반드시 `composer ci`를 쓴다. CS 위반은 `composer cs-fix`로 자동 수정 후 커밋한다.
+> ⚠️ `composer check`(analyse+test)는 **CS Fixer를 포함하지 않아** 스타일 위반을 놓친다. 루트 검증은 반드시 `composer ci`를 쓴다. CS 위반은 `composer cs-fix`로 자동 수정 후 커밋한다.
 
-> 새 PHP 코드는 PHPStan level 6 통과 + 관련 PHPUnit 테스트가 그린이어야 CI를 통과한다. 새 기능에는 `tests/` 테스트를 함께 작성한다.
+> 새 PHP 코드는 PHPStan level 6 통과 + 관련 PHPUnit 테스트가 그린이어야 배포 PR 의 CI 를 통과한다. 새 기능에는 `tests/` 테스트를 함께 작성한다.
 
 ## CD (배포)
 

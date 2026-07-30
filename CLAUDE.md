@@ -27,6 +27,7 @@ AI 기반 성형·토탈 광고 솔루션. CodeIgniter 4 기반 Admin + REST API
 cp env .env          # env 파일을 .env로 복사 후 아래 필수 키 설정
 composer install
 php spark migrate
+git config core.hooksPath .githooks   # 로컬 검증 게이트 활성화 (최초 1회, 상세: .claude/rules/ci-cd.md)
 ```
 
 `.env` 필수 키:
