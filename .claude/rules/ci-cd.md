@@ -43,41 +43,54 @@ git config core.hooksPath .githooks
 
 ## CI (GitHub Actions)
 
-**배포 PR(`dev` → `main`)에서만** 자동 검증된다. 정의: `.github/workflows/ci.yml` (단일 파일, `backend`·`frontapi` 두 잡 병렬). 각 잡은 자체 `mysql:8.0` 서비스 컨테이너를 띄운다.
+**배포 PR(`dev` → `main`)에서만** 자동 검증된다(+ `workflow_dispatch` 수동 실행). 정의: `.github/workflows/ci.yml` (단일 파일, `backend`·`frontapi` 두 잡).
 
 ```yaml
 on:
   pull_request:
     branches: [main]     # dev 로 가는 PR 에서는 돌지 않는다
+  workflow_dispatch:
 ```
 
 `branches` 를 비워두거나 `dev` 를 추가하면 이 정책이 무의미해진다. `dev → main` 배포 PR 은 merge commit 으로 머지하므로(전역 규칙), CI 가 통과한 커밋 조합이 그대로 `main` 에 올라간다.
 
 - **동시성**: 같은 ref 새 푸시 시 진행 중 실행 취소 (`concurrency.cancel-in-progress`)
 
+### self-hosted 러너에서 돈다
+
+GitHub 호스팅 러너(`ubuntu-latest`)가 아니라 이 로컬 Mac을 self-hosted 러너로 등록해서 돈다. 두 잡 모두 `runs-on: [self-hosted, macOS, ARM64]`.
+
+- **러너 위치**: `~/actions-runners/AILicet` (저장소 밖). 러너 이름 `mac-local-runner`, launchd 서비스 `actions.runner.pushwing-AILicet.mac-local-runner` — Mac이 켜져 있으면 자동으로 리스닝한다. (같은 Mac에 AIFid·AIPicto 용 러너도 별도로 등록돼 있다 — 저장소별로 러너가 분리된다.)
+- **MySQL**: self-hosted macOS 러너는 `services:` 도커 컨테이너를 지원하지 않는다(Linux 러너 전용 기능). 대신 각 잡에서 `docker run` 으로 직접 기동하고 `if: always()` 스텝으로 정리한다.
+- **포트**: 이 Mac은 개발용 시스템 `mysqld`가 이미 `3306`을 상시 점유하고 있어, CI 전용 컨테이너는 다른 호스트 포트를 쓴다 — `backend` 잡은 `13306`, `frontapi` 잡은 `23306`(두 잡이 동시에 돌 수 있어 서로 다른 포트).
+- **sed 문법**: macOS 기본 `sed`는 BSD 계열이라 `-i` 뒤에 빈 문자열 인자가 필요하다(`sed -i '' "..."`). GNU sed(`sed -i "..."`)와 다르니 워크플로 수정 시 주의.
+- **호스팅 러너로 되돌리려면**: `runs-on` 을 `ubuntu-latest` 로 바꾸고 `docker run` 스텝을 `services:` 블록으로 되돌리면 된다(포트도 표준값 `3306`으로 원복 가능).
+
 ### `backend` 잡 — PHP 8.5 · CS Fixer · PHPStan · PHPUnit
 
 루트 CI4 프로젝트를 검증한다. 다음 순서로 실행한다.
 
-1. setup-php `8.5` (확장: `mbstring intl mysqli curl dom xml tokenizer`, 커버리지 `pcov`)
+1. MySQL 컨테이너 기동(`docker run -p 13306:3306 mysql:8.0`) → `mysqladmin ping` 으로 헬스 대기
+2. setup-php `8.5` (확장: `mbstring intl mysqli curl dom xml tokenizer`, 커버리지 `pcov`)
    - `phpunit.dist.xml` 이 `failOnWarning` + `<coverage>` 를 켜 두어 커버리지 드라이버 없으면 경고→실패 → `pcov` 필수
-2. Composer 캐시 → `composer install`
-3. `composer cs` (php-cs-fixer `--dry-run` 스타일 검사)
-4. `env` → `.env` 복사 후 CI용 DB·`JWT_SECRET` 주입
-5. `writable/` 하위 디렉토리 생성 (git 미추적, `WRITEPATH` 보장)
-6. `composer analyse` (PHPStan level 6)
-7. MySQL 헬스 대기 → `phpunit.dist.xml` 의 `database.tests.hostname` 을 `localhost` → `127.0.0.1` 로 sed 치환 (MySQLi TCP 강제)
+3. Composer 캐시 → `composer install`
+4. `composer cs` (php-cs-fixer `--dry-run` 스타일 검사)
+5. `env` → `.env` 복사 후 CI용 DB(호스트 `127.0.0.1`·포트 `13306`)·`JWT_SECRET` 주입
+6. `writable/` 하위 디렉토리 생성 (git 미추적, `WRITEPATH` 보장)
+7. `composer analyse` (PHPStan level 6)
 8. `composer test` (PHPUnit 단위·DB 통합)
+9. 컨테이너 정리 (`if: always()`)
 
 ### `frontapi` 잡 — pure PHP · PHPStan · PHPUnit
 
 `frontapi/` 작업 디렉토리(클라이언트 프로그램용 라이선스 인증 API, 순수 PHP·CI4 미사용)를 검증한다.
 
-1. setup-php `8.5` (확장: `mbstring intl pdo_mysql curl dom xml tokenizer`)
-2. `composer install`
-3. `composer analyse` (PHPStan level 6)
-4. MySQL 헬스 대기
-5. `composer test` (PHPUnit — DB 접속정보는 `DB_*` env 로 주입)
+1. MySQL 컨테이너 기동(`docker run -p 23306:3306 mysql:8.0`) → 헬스 대기
+2. setup-php `8.5` (확장: `mbstring intl pdo_mysql curl dom xml tokenizer`)
+3. `composer install`
+4. `composer analyse` (PHPStan level 6)
+5. `composer test` (PHPUnit — DB 접속정보는 `DB_HOST=127.0.0.1`·`DB_PORT=23306` 등 `DB_*` env 로 주입)
+6. 컨테이너 정리 (`if: always()`)
 
 ### 로컬 사전 검증 명령 (참고)
 
