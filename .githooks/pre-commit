@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# 스테이징된 *.php 를 PHP-CS-Fixer 로 자동 수정 후 재-스테이징한다.
+# 커밋 자체를 막지는 않는다 — 스타일 검사(composer cs)는 pre-push 에서 강제된다.
+set -euo pipefail
+
+[ "${SKIP_HOOKS:-0}" = "1" ] && exit 0
+
+command -v composer >/dev/null 2>&1 || exit 0
+
+staged_php=$(git diff --cached --name-only --diff-filter=ACMR -- '*.php')
+[ -z "$staged_php" ] && exit 0
+
+composer cs-fix >/dev/null 2>&1 || true
+
+echo "$staged_php" | while IFS= read -r file; do
+    [ -f "$file" ] && git add -- "$file"
+done
+
+exit 0
