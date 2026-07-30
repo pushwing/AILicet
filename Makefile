@@ -1,12 +1,13 @@
 .PHONY: serve serve-spark migrate test analyse check swagger routes cache-clear help
 
-PORT ?= 8300
+PORT ?= 8301
 
-## serve: 개발 서버 — FrankenPHP (포트 8300, 권장)
+## serve: 개발 서버 — FrankenPHP (포트 8301, 권장)
+## --no-compress: Homebrew frankenphp 빌드에 Brotli 인코더가 빠져 있어 압축 사용 시 기동 실패
 serve:
-	frankenphp php-server --listen :$(PORT) --root public/ --watch
+	frankenphp php-server --listen :$(PORT) --root public/ --watch --no-compress
 
-## serve-spark: 개발 서버 — CI4 내장 (포트 8300)
+## serve-spark: 개발 서버 — CI4 내장 (포트 8301)
 serve-spark:
 	php spark serve --port $(PORT)
 
