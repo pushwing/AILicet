@@ -6,7 +6,7 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
-<div class="page-head" style="display:flex;justify-content:space-between;align-items:flex-end;">
+<div class="page-head page-head--actions">
     <div>
         <h1 class="page-head__title">라이센스 관리</h1>
         <p class="page-head__desc">발급된 라이센스를 조회·관리합니다.</p>

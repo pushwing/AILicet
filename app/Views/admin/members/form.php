@@ -31,7 +31,7 @@ $isAgency      = $isEdit && ($customer['customer_type'] ?? '') === 'agency';
     <div class="card" style="margin-bottom:20px;">
         <div class="card__head">회원 정보</div>
         <div class="card__body">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="form-grid">
                 <div class="field">
                     <label class="field__label" for="customer_type">회원 유형 *</label>
                     <select class="input" id="customer_type" name="customer_type" required onchange="toggleParent()">

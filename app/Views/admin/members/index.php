@@ -6,7 +6,7 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
-<div class="page-head" style="display:flex;justify-content:space-between;align-items:flex-end;">
+<div class="page-head page-head--actions">
     <div>
         <h1 class="page-head__title">회원관리</h1>
         <p class="page-head__desc">대행사·고객 회원을 관리합니다.</p>
