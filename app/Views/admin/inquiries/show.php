@@ -20,7 +20,7 @@ $row = static fn (string $label, ?string $value): string =>
 <?= $this->extend('layouts/app') ?>
 
 <?= $this->section('content') ?>
-<div class="page-head" style="display:flex;justify-content:space-between;align-items:flex-end;">
+<div class="page-head page-head--actions">
     <div>
         <h1 class="page-head__title">문의 #<?= esc((string) $inquiry['id']) ?>
             <span class="badge badge--<?= esc($statusCls) ?>" style="vertical-align:middle;"><?= esc($status?->label() ?? (string) $inquiry['status']) ?></span>
@@ -37,7 +37,7 @@ $row = static fn (string $label, ?string $value): string =>
     <div class="alert alert--success"><?= esc(session()->getFlashdata('message')) ?></div>
 <?php endif; ?>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">
+<div class="detail-grid detail-grid--balanced">
     <!-- 문의 내용 -->
     <div class="card">
         <div class="card__head">문의 내용</div>

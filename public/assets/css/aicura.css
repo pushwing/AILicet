@@ -53,8 +53,13 @@ body {
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
 }
+button, input, select, textarea { font: inherit; }
 a { color: var(--color-primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
+:focus-visible {
+    outline: 3px solid var(--color-secondary);
+    outline-offset: 3px;
+}
 
 /* ---------- 앱 셸(사이드바 + 상단바 + 콘텐츠) ---------- */
 .app-shell { display: flex; min-height: 100vh; }
@@ -68,6 +73,7 @@ a:hover { text-decoration: underline; }
     position: fixed;
     inset: 0 auto 0 0;
     height: 100vh;
+    z-index: 30;
 }
 .sidebar__brand {
     height: var(--topbar-height);
@@ -125,6 +131,7 @@ a:hover { text-decoration: underline; }
     top: 0;
     z-index: 10;
 }
+.topbar__context { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .topbar__title { font-size: 16px; font-weight: 600; }
 .topbar__user { display: flex; align-items: center; gap: 12px; }
 .topbar__avatar {
@@ -138,6 +145,25 @@ a:hover { text-decoration: underline; }
 .topbar__meta { text-align: right; line-height: 1.25; }
 .topbar__name { font-weight: 600; font-size: 13px; }
 .topbar__role { font-size: 11px; color: var(--color-text-muted); }
+.topbar__bell {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    color: var(--color-text);
+    font-size: 20px;
+    text-decoration: none;
+}
+.topbar__notification-count {
+    position: absolute;
+    top: 1px;
+    right: -2px;
+    min-width: 18px;
+    padding: 1px 5px;
+    font-size: 11px;
+}
+.nav-toggle, .sidebar-backdrop { display: none; }
 
 .content { padding: 24px; flex: 1; }
 .page-head { margin-bottom: 20px; }
@@ -158,6 +184,12 @@ a:hover { text-decoration: underline; }
     display: flex; align-items: center; justify-content: space-between;
 }
 .card__body { padding: 20px; }
+.page-head--actions { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.detail-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.detail-grid--balanced { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.inline-action-form { display: flex; gap: 8px; }
+.module-create-form { display: grid; grid-template-columns: 220px minmax(0, 1fr) auto; gap: 12px; align-items: end; }
 
 /* 통계 카드 */
 .stat-grid {
@@ -184,6 +216,7 @@ a:hover { text-decoration: underline; }
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    min-height: 36px;
     padding: 9px 16px;
     border-radius: var(--radius-sm);
     border: 1px solid transparent;
@@ -304,6 +337,41 @@ a:hover { text-decoration: underline; }
 .grid-wrap { width: 100%; }
 
 @media (max-width: 900px) {
-    .sidebar { transform: translateX(-100%); transition: transform 0.2s; }
+    .sidebar { transform: translateX(-100%); transition: transform 0.2s ease-out; box-shadow: var(--shadow-md); }
+    .sidebar-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        border: 0;
+        background: rgba(16, 40, 32, 0.4);
+    }
+    body.is-navigation-open { overflow: hidden; }
+    body.is-navigation-open .sidebar { transform: translateX(0); }
+    body.is-navigation-open .sidebar-backdrop { display: block; }
     .main { margin-left: 0; }
+    .nav-toggle { display: inline-flex; align-items: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 8px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-text); cursor: pointer; }
+    .nav-toggle__icon, .nav-toggle__icon::before, .nav-toggle__icon::after { width: 18px; height: 2px; border-radius: 2px; background: currentColor; }
+    .nav-toggle__icon { position: relative; display: block; }
+    .nav-toggle__icon::before, .nav-toggle__icon::after { position: absolute; left: 0; content: ''; }
+    .nav-toggle__icon::before { top: -6px; }
+    .nav-toggle__icon::after { top: 6px; }
+    .content { padding: 20px; }
+    .page-head--actions { align-items: stretch; flex-direction: column; }
+    .form-grid, .detail-grid, .detail-grid--balanced { grid-template-columns: 1fr; }
+    .inline-action-form { flex-wrap: wrap; }
+    .inline-action-form .input { min-width: min(100%, 220px); flex: 1 1 220px; }
+}
+
+@media (max-width: 640px) {
+    .topbar { height: auto; min-height: var(--topbar-height); padding: 8px 12px; gap: 8px; }
+    .topbar__user { gap: 6px; }
+    .topbar__meta, .topbar__avatar { display: none; }
+    .content { padding: 16px; }
+    .card__head, .card__body { padding: 14px 16px; }
+    .page-head__title { font-size: 20px; }
+    .page-head--actions > .btn, .page-head--actions > a.btn { width: 100%; justify-content: center; }
+    .btn { min-height: 44px; }
+    .input { font-size: 16px; }
+    .stat-grid { grid-template-columns: 1fr; }
+    .module-create-form { grid-template-columns: 1fr; }
 }

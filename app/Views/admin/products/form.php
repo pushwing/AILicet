@@ -57,7 +57,7 @@ if ($descriptionHtml === null) {
     <div class="card" style="margin-bottom:20px;">
         <div class="card__head">기본 정보</div>
         <div class="card__body">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="form-grid">
                 <div class="field">
                     <label class="field__label" for="product_code">상품코드 *</label>
                     <input class="input" id="product_code" name="product_code" required

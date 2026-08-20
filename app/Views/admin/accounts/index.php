@@ -6,7 +6,7 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
-<div class="page-head" style="display:flex;justify-content:space-between;align-items:flex-end;">
+<div class="page-head page-head--actions">
     <div>
         <h1 class="page-head__title">운영자 관리</h1>
         <p class="page-head__desc">AITessera 운영자 계정을 조회·수정하고 신규 운영자 계정을 생성합니다.</p>

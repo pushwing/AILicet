@@ -29,7 +29,7 @@ $issuedModules = array_fill_keys($licenseModules, true);
 <?= $this->extend('layouts/app') ?>
 
 <?= $this->section('content') ?>
-<div class="page-head" style="display:flex;justify-content:space-between;align-items:flex-end;">
+<div class="page-head page-head--actions">
     <div>
         <h1 class="page-head__title">라이센스 #<?= esc((string) $license['id']) ?>
             <span class="badge badge--<?= $statusCls ?>" style="vertical-align:middle;"><?= esc($status?->label() ?? '') ?></span>
@@ -49,7 +49,7 @@ $issuedModules = array_fill_keys($licenseModules, true);
     <div class="alert alert--danger"><?= esc(session()->getFlashdata('error')) ?></div>
 <?php endif; ?>
 
-<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:20px;align-items:start;">
+<div class="detail-grid">
     <!-- 정보 -->
     <div class="card">
         <div class="card__head">라이센스 정보</div>
@@ -86,7 +86,7 @@ $issuedModules = array_fill_keys($licenseModules, true);
         <div class="card__body" style="display:flex;flex-direction:column;gap:14px;">
             <?php $lid = (string) $license['id']; ?>
             <?php if ($status === LicenseStatus::Active): ?>
-                <form method="post" action="/admin/licenses/<?= $lid ?>/suspend" style="display:flex;gap:8px;">
+                <form method="post" action="/admin/licenses/<?= $lid ?>/suspend" class="inline-action-form">
                     <?= csrf_field() ?>
                     <input class="input" name="reason" placeholder="정지 사유">
                     <button class="btn btn--ghost">정지</button>
@@ -99,12 +99,12 @@ $issuedModules = array_fill_keys($licenseModules, true);
             <?php endif; ?>
 
             <?php if ($status === LicenseStatus::Active || $status === LicenseStatus::Suspended): ?>
-                <form method="post" action="/admin/licenses/<?= $lid ?>/extend" style="display:flex;gap:8px;">
+                <form method="post" action="/admin/licenses/<?= $lid ?>/extend" class="inline-action-form">
                     <?= csrf_field() ?>
                     <input class="input" type="date" name="expire_date" required>
                     <button class="btn btn--ghost">연장</button>
                 </form>
-                <form method="post" action="/admin/licenses/<?= $lid ?>/reissue" style="display:flex;gap:8px;"
+                <form method="post" action="/admin/licenses/<?= $lid ?>/reissue" class="inline-action-form"
                       onsubmit="return confirm('재발급하면 이전 키가 폐기됩니다. 진행할까요?');">
                     <?= csrf_field() ?>
                     <?php if ($isNode): ?>
@@ -127,7 +127,7 @@ $issuedModules = array_fill_keys($licenseModules, true);
     </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:20px;align-items:start;margin-top:20px;">
+<div class="detail-grid" style="margin-top:20px;">
     <!-- 상품 정보 -->
     <div class="card">
         <div class="card__head" style="display:flex;justify-content:space-between;align-items:center;">

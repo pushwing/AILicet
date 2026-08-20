@@ -25,7 +25,7 @@ $aiExplanation = is_string($log['ai_explanation'] ?? null) ? trim((string) $log[
 <?= $this->extend('layouts/app') ?>
 
 <?= $this->section('content') ?>
-<div class="page-head" style="display:flex;justify-content:space-between;align-items:flex-end;">
+<div class="page-head page-head--actions">
     <div>
         <h1 class="page-head__title">감사로그 #<?= esc((string) $log['id']) ?>
             <span class="badge badge--warning" style="vertical-align:middle;"><?= esc($event?->label() ?? (string) $log['event_type']) ?></span>
@@ -45,7 +45,7 @@ $aiExplanation = is_string($log['ai_explanation'] ?? null) ? trim((string) $log[
     </div>
 <?php endif; ?>
 
-<div style="display:grid;grid-template-columns:1.2fr 1fr;gap:20px;align-items:start;">
+<div class="detail-grid">
     <!-- 이벤트 정보 -->
     <div class="card">
         <div class="card__head">이벤트 정보</div>

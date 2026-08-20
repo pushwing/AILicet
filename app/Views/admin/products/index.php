@@ -48,7 +48,7 @@
     <div class="card" style="margin-bottom:16px;">
         <div class="card__head">모듈 등록</div>
         <div class="card__body">
-            <form method="post" action="/admin/modules" style="display:grid;grid-template-columns:220px 1fr auto;gap:12px;align-items:end;">
+            <form method="post" action="/admin/modules" class="module-create-form">
                 <?= csrf_field() ?>
                 <div class="field" style="margin:0;">
                     <label class="field__label" for="new_module_code">모듈코드 *</label>
