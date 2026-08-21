@@ -58,7 +58,7 @@ foreach ($menus as $m) {
 <html lang="ko">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title><?= esc($title) ?> · AILicet</title>
     <link rel="icon" type="image/svg+xml" href="<?= base_url('favicon.svg') ?>">
     <link rel="alternate icon" href="<?= base_url('favicon.ico') ?>">
@@ -68,7 +68,8 @@ foreach ($menus as $m) {
 </head>
 <body>
 <div class="app-shell">
-    <aside class="sidebar">
+    <button class="sidebar-backdrop" type="button" aria-label="메뉴 닫기" tabindex="-1"></button>
+    <aside class="sidebar" id="primary-navigation">
         <div class="sidebar__brand">
             <img class="sidebar__brand-mark" src="<?= base_url('assets/img/ailicet-mark-on-dark.svg') ?>" width="28" height="28" alt=""> AILicet
         </div>
@@ -76,7 +77,7 @@ foreach ($menus as $m) {
         <nav class="sidebar__nav">
             <?php foreach ($menus as $menu): ?>
                 <a class="nav-item <?= $activeMenu === $menu['key'] ? 'is-active' : '' ?>"
-                   href="<?= esc($menu['url']) ?>">
+                   href="<?= esc($menu['url']) ?>" <?= $activeMenu === $menu['key'] ? 'aria-current="page"' : '' ?>>
                     <span class="nav-item__icon"><?= $menu['icon'] ?></span>
                     <span><?= esc($menu['label']) ?></span>
                     <?php if ($menu['key'] === 'notifications' && $unread > 0): ?>
@@ -89,13 +90,19 @@ foreach ($menus as $m) {
 
     <div class="main">
         <header class="topbar">
-            <div class="topbar__title"><?= esc($title) ?></div>
+            <div class="topbar__context">
+                <button class="nav-toggle" type="button" aria-controls="primary-navigation" aria-expanded="false">
+                    <span class="nav-toggle__icon" aria-hidden="true"></span>
+                    <span>메뉴</span>
+                </button>
+                <div class="topbar__title"><?= esc($title) ?></div>
+            </div>
             <div class="topbar__user">
                 <?php if ($notifUrl !== ''): ?>
-                    <a class="topbar__bell" href="<?= esc($notifUrl) ?>" title="알림" style="position:relative;text-decoration:none;font-size:20px;margin-right:6px;">
+                    <a class="topbar__bell" href="<?= esc($notifUrl) ?>" aria-label="<?= $unread > 0 ? '읽지 않은 알림 ' . $unread . '건' : '알림' ?>">
                         🔔
                         <?php if ($unread > 0): ?>
-                            <span class="badge badge--danger" style="position:absolute;top:-6px;right:-10px;font-size:11px;"><?= esc((string) $unread) ?></span>
+                            <span class="badge badge--danger topbar__notification-count" aria-hidden="true"><?= esc((string) $unread) ?></span>
                         <?php endif; ?>
                     </a>
                 <?php endif; ?>
@@ -114,5 +121,29 @@ foreach ($menus as $m) {
     </div>
 </div>
 <?= $this->renderSection('scripts') ?>
+<script>
+    (() => {
+        const toggle = document.querySelector('.nav-toggle');
+        const backdrop = document.querySelector('.sidebar-backdrop');
+        const sidebar = document.querySelector('.sidebar');
+        if (!(toggle instanceof HTMLButtonElement) || !(backdrop instanceof HTMLButtonElement) || !(sidebar instanceof HTMLElement)) return;
+
+        const closeNavigation = () => {
+            document.body.classList.remove('is-navigation-open');
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.focus();
+        };
+
+        toggle.addEventListener('click', () => {
+            const isOpen = document.body.classList.toggle('is-navigation-open');
+            toggle.setAttribute('aria-expanded', String(isOpen));
+            if (isOpen) sidebar.querySelector('a')?.focus();
+        });
+        backdrop.addEventListener('click', closeNavigation);
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && document.body.classList.contains('is-navigation-open')) closeNavigation();
+        });
+    })();
+</script>
 </body>
 </html>

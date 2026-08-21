@@ -18,7 +18,7 @@ $val    = static fn (string $k): string => esc((string) ($account[$k] ?? old($k)
 <form method="post" action="<?= esc($action) ?>">
     <?= csrf_field() ?>
     <div class="card" style="margin-bottom:20px;"><div class="card__body">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="form-grid">
             <div class="field">
                 <label class="field__label" for="email">이메일 *</label>
                 <input class="input" type="email" id="email" name="email" value="<?= $val('email') ?>"

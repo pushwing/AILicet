@@ -28,13 +28,13 @@
     <div class="card__body">
         <form id="aiQueryForm" style="display:flex;gap:8px;flex-wrap:wrap;">
             <input type="text" id="aiQueryInput" placeholder="예: 이번 달 발급 건수, 만료 임박 몇 개, 부정사용 감지 추이"
-                   style="flex:1;min-width:240px;padding:10px 12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);outline:none;">
+                   class="input" style="flex:1;min-width:240px;">
             <button type="submit" id="aiQueryBtn" class="btn btn--primary">질의</button>
         </form>
         <div id="aiQueryResult" style="margin-top:14px;display:none;">
             <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
                 <span id="aiQueryMetric" class="badge badge--muted"></span>
-                <span id="aiQueryValue" style="font-size:24px;font-weight:700;color:#0F6E56;"></span>
+                <span id="aiQueryValue" style="font-size:24px;font-weight:700;color:var(--color-primary);"></span>
             </div>
             <p id="aiQueryInsight" style="margin:8px 0 0;color:var(--color-text);line-height:1.6;"></p>
         </div>

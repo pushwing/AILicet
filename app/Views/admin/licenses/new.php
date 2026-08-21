@@ -37,7 +37,7 @@
     <div class="card" style="margin-bottom:20px;">
         <div class="card__head">발급 정보</div>
         <div class="card__body">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="form-grid">
                 <div class="field">
                     <label class="field__label" for="product_id">상품 *</label>
                     <select class="input" id="product_id" name="product_id" required onchange="onProductChange()">

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-20T00:00:00+09:00",
+  "title": "Design System: AILicet",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "검증 녹색", "canonical": "#0F6E56" },
+      "secondary": { "role": "secondary", "displayName": "활성 청록 녹색", "canonical": "#1D9E75" },
+      "background": { "role": "neutral", "displayName": "작업 배경", "canonical": "#F4F6F5" },
+      "surface": { "role": "neutral", "displayName": "표면", "canonical": "#FFFFFF" },
+      "nav-text": { "role": "neutral", "displayName": "사이드바 본문", "canonical": "#DCEAE4" },
+      "backdrop": { "role": "neutral", "displayName": "drawer 배경막", "canonical": "rgba(16, 40, 32, 0.4)" }
+    },
+    "shadows": [
+      { "name": "surface-low", "value": "0 1px 2px rgba(16, 40, 32, 0.06)", "purpose": "기본 카드 표면의 얕은 깊이" },
+      { "name": "drawer", "value": "0 4px 16px rgba(16, 40, 32, 0.08)", "purpose": "모바일 drawer의 전경 분리" }
+    ],
+    "motion": [
+      { "name": "navigation", "value": "transform 0.2s ease-out", "purpose": "모바일 drawer 열기와 닫기" }
+    ],
+    "breakpoints": [
+      { "name": "navigation", "value": "900px" },
+      { "name": "mobile", "value": "640px" }
+    ]
+  },
+  "narrative": {
+    "northStar": "검증 가능한 운영 콘솔",
+    "keyCharacteristics": ["신뢰감 있는 녹색 상태 표현", "밝은 표면과 얕은 깊이", "짧고 명확한 운영 레이블"],
+    "dos": ["CSS 변수 토큰을 사용한다.", "상태를 텍스트와 색상으로 함께 표현한다.", "모바일에서도 모든 운영 경로를 제공한다."],
+    "donts": ["공통 토큰을 우회하는 인라인 색상과 간격을 반복하지 않는다.", "모바일에서 핵심 내비게이션을 숨기지 않는다."]
+  }
+}
