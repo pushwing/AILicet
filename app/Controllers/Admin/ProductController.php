@@ -26,6 +26,7 @@ final class ProductController extends BaseAdminController
             'activeMenu' => 'products',
             'products'   => service('productService')->list(),
             'modules'    => service('moduleService')->list(),
+            'authenticationMethods' => $this->authenticationMethods(),
         ]);
     }
 
@@ -41,6 +42,7 @@ final class ProductController extends BaseAdminController
             'masterModules' => service('moduleService')->activeForSelect(),
             'licenseTypes'  => LicenseType::cases(),
             'periodCodes'   => PeriodCode::cases(),
+            'authenticationMethods' => $this->authenticationMethods(),
         ]);
     }
 
@@ -73,6 +75,7 @@ final class ProductController extends BaseAdminController
             'masterModules' => [],
             'licenseTypes'  => LicenseType::cases(),
             'periodCodes'   => PeriodCode::cases(),
+            'authenticationMethods' => $this->authenticationMethods(),
         ]);
     }
 
@@ -94,5 +97,18 @@ final class ProductController extends BaseAdminController
         service('productService')->delete($id);
 
         return redirect()->to('/admin/products')->with('message', '상품이 삭제되었습니다.');
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function authenticationMethods(): array
+    {
+        $methods = [];
+        foreach (LicenseType::cases() as $type) {
+            $methods[$type->value] = $type->authenticationMethodLabel();
+        }
+
+        return $methods;
     }
 }
