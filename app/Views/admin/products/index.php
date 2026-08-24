@@ -4,6 +4,7 @@
  *
  * @var list<array<string, mixed>> $products
  * @var list<array{id:int, code:string, name:string, is_active:int, product_count:int}> $modules
+ * @var array<string, string> $authenticationMethods
  */
 ?>
 <?= $this->extend('layouts/app') ?>
@@ -111,6 +112,7 @@
     const CSRF_HASH = '<?= csrf_hash() ?>';
 
     const LICENSE_LABEL = { nodelock: '노드락', floating: '플로팅' };
+    const AUTHENTICATION_METHOD_LABEL = <?= json_encode($authenticationMethods, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
     const PERIOD_LABEL = {
         perpetual: '영구', period: '기간 제한', period_count: '기간+횟수',
         perpetual_count: '영구+횟수', perpetual_credit: '영구+크레딧',
@@ -152,6 +154,10 @@
             {
                 field: 'license_type', headerName: '종류', flex: 0.7,
                 cellRenderer: p => `<span class="badge badge--muted">${LICENSE_LABEL[p.value] || p.value}</span>`,
+            },
+            {
+                field: 'license_type', headerName: '인증 방식', flex: 1.25,
+                valueFormatter: p => AUTHENTICATION_METHOD_LABEL[p.value] || '-',
             },
             { field: 'version', headerName: '버전', flex: 0.7 },
             {

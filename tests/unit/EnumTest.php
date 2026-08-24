@@ -23,6 +23,8 @@ final class EnumTest extends CIUnitTestCase
         $this->assertSame('floating', LicenseType::Floating->value);
         $this->assertSame(LicenseType::Floating, LicenseType::from('floating'));
         $this->assertSame('노드락', LicenseType::NodeLock->label());
+        $this->assertSame('서명 파일·온라인 검증', LicenseType::NodeLock->authenticationMethodLabel());
+        $this->assertSame('온라인 활성화·잔여 검증', LicenseType::Floating->authenticationMethodLabel());
     }
 
     public function testLicenseStatusUsability(): void

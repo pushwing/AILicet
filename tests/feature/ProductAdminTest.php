@@ -34,6 +34,7 @@ final class ProductAdminTest extends CIUnitTestCase
 
         $result->assertStatus(200);
         $result->assertSee('상품·모듈 관리');
+        $result->assertSee('인증 방식');
         $result->assertSeeElement('#productGrid');
     }
 
@@ -79,5 +80,6 @@ final class ProductAdminTest extends CIUnitTestCase
         $result->assertStatus(200);
         $result->assertSee('상품 수정');
         $result->assertSee('PT901');
+        $result->assertSee('서명 파일·온라인 검증');
     }
 }

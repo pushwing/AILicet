@@ -22,4 +22,18 @@ enum LicenseType: string
             self::Floating => '플로팅',
         };
     }
+
+    /**
+     * 해당 라이선스 유형에 적용되는 클라이언트 인증 방식을 설명한다.
+     *
+     * 인증 경로는 발급·검증 서비스가 license_type 으로 분기하므로 별도 값으로
+     * 저장하지 않는다. 이렇게 하면 관리 화면의 안내와 실제 검증 방식이 항상 일치한다.
+     */
+    public function authenticationMethodLabel(): string
+    {
+        return match ($this) {
+            self::NodeLock => '서명 파일·온라인 검증',
+            self::Floating => '온라인 활성화·잔여 검증',
+        };
+    }
 }
