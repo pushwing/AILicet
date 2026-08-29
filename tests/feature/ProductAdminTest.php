@@ -34,8 +34,10 @@ final class ProductAdminTest extends CIUnitTestCase
 
         $result->assertStatus(200);
         $result->assertSee('상품·모듈 관리');
-        $result->assertSee('인증 방식');
         $result->assertSeeElement('#productGrid');
+        // AG Grid 컬럼 헤더는 스크립트 안에서만 렌더링되어 DOM 기반 assertSee()로는
+        // 검증되지 않는다(DOMParser 가 <script> 내용을 CDATA 취급) — 원문 응답으로 확인.
+        $this->assertStringContainsString('인증 방식', $result->response()->getBody());
     }
 
     public function testNonOperatorIsForbidden(): void
