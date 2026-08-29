@@ -12,6 +12,8 @@ AILicet 은 성형·토탈 광고 솔루션(AIvance 제품군)을 위한 **라�
 
 ## 아키텍처
 
+> 인터랙티브 다이어그램(줌·패닝·다크모드): [docs/architecture-diagram.html](docs/architecture-diagram.html)
+
 ```
 ┌────────────────────────────┐        ┌──────────────────────────┐
 │  AILicet 콘솔 (CodeIgniter4) │        │  frontApi (pure PHP)      │
