@@ -12,6 +12,10 @@ $isEdit = $product !== null;
 $action = $isEdit ? '/admin/products/' . $product['id'] : '/admin/products';
 $val    = static fn (string $k, string $default = ''): string => esc((string) ($product[$k] ?? old($k) ?? $default));
 
+// 인증 방식 초기값: 서버에서도 렌더링해 JS 로드 전에도 보이게 한다(license_type 변경 시엔 JS 가 갱신).
+$currentLicenseType     = (string) ($product['license_type'] ?? old('license_type') ?? '');
+$currentAuthenticationMethod = $authenticationMethods[$currentLicenseType] ?? '';
+
 // 버전 textarea 초기값: 활성 버전 목록(줄 단위). old() 우선(검증 실패 재입력 보존).
 $versionsText = old('versions');
 if ($versionsText === null) {
@@ -86,7 +90,8 @@ if ($descriptionHtml === null) {
                 </div>
                 <div class="field">
                     <label class="field__label" for="authentication_method">인증 방식</label>
-                    <input class="input" id="authentication_method" readonly aria-describedby="authentication_method_help">
+                    <input class="input" id="authentication_method" readonly aria-describedby="authentication_method_help"
+                           value="<?= esc($currentAuthenticationMethod) ?>">
                     <p id="authentication_method_help" class="muted" style="margin:6px 0 0;font-size:12px;">
                         라이선스 종류에 따라 실제 발급·검증 경로가 자동으로 적용됩니다.
                     </p>
