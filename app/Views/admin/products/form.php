@@ -6,10 +6,15 @@
  * @var list<array{id:int, code:string, name:string}> $masterModules
  * @var list<\App\Enums\LicenseType> $licenseTypes
  * @var list<\App\Enums\PeriodCode> $periodCodes
+ * @var array<string, string> $authenticationMethods
  */
 $isEdit = $product !== null;
 $action = $isEdit ? '/admin/products/' . $product['id'] : '/admin/products';
 $val    = static fn (string $k, string $default = ''): string => esc((string) ($product[$k] ?? old($k) ?? $default));
+
+// 인증 방식 초기값: 서버에서도 렌더링해 JS 로드 전에도 보이게 한다(license_type 변경 시엔 JS 가 갱신).
+$currentLicenseType     = (string) ($product['license_type'] ?? old('license_type') ?? '');
+$currentAuthenticationMethod = $authenticationMethods[$currentLicenseType] ?? '';
 
 // 버전 textarea 초기값: 활성 버전 목록(줄 단위). old() 우선(검증 실패 재입력 보존).
 $versionsText = old('versions');
@@ -44,7 +49,7 @@ if ($descriptionHtml === null) {
 <?= $this->section('content') ?>
 <div class="page-head">
     <h1 class="page-head__title"><?= $isEdit ? '상품 수정' : '상품 등록' ?></h1>
-    <p class="page-head__desc">상품 정보와 라이선스 종류·기간정책, 모듈을 정의합니다.</p>
+    <p class="page-head__desc">상품 정보와 라이선스 종류·인증 방식·기간정책, 모듈을 정의합니다.</p>
 </div>
 
 <?php if (session()->getFlashdata('error')): ?>
@@ -82,6 +87,14 @@ if ($descriptionHtml === null) {
                             </option>
                         <?php endforeach; ?>
                     </select>
+                </div>
+                <div class="field">
+                    <label class="field__label" for="authentication_method">인증 방식</label>
+                    <input class="input" id="authentication_method" readonly aria-describedby="authentication_method_help"
+                           value="<?= esc($currentAuthenticationMethod) ?>">
+                    <p id="authentication_method_help" class="muted" style="margin:6px 0 0;font-size:12px;">
+                        라이선스 종류에 따라 실제 발급·검증 경로가 자동으로 적용됩니다.
+                    </p>
                 </div>
                 <div class="field">
                     <label class="field__label" for="period_code">기간정책</label>
@@ -197,6 +210,17 @@ if ($descriptionHtml === null) {
     // 초기 HTML 은 서버에서 안전하게 직렬화(json_encode)해 전달한다.
     const INITIAL_HTML = <?= json_encode($descriptionHtml, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
     const hidden = document.getElementById('descriptionInput');
+
+    const AUTHENTICATION_METHODS = <?= json_encode($authenticationMethods, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const licenseType = document.getElementById('license_type');
+    const authenticationMethod = document.getElementById('authentication_method');
+
+    function syncAuthenticationMethod() {
+        authenticationMethod.value = AUTHENTICATION_METHODS[licenseType.value] || '-';
+    }
+
+    licenseType.addEventListener('change', syncAuthenticationMethod);
+    syncAuthenticationMethod();
 
     const editor = new Editor({
         element: document.getElementById('descEditor'),
