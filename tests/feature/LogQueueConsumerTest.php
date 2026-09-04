@@ -4,21 +4,15 @@ declare(strict_types=1);
 
 use App\Queue\InMemoryLogQueue;
 use App\Services\LogQueueConsumer;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 로그 큐 소비자 — 원시파일 보존 + DB INSERT + dead-letter.
  *
  * @internal
  */
-final class LogQueueConsumerTest extends CIUnitTestCase
+final class LogQueueConsumerTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     private string $rawDir;
     private string $deadDir;
 

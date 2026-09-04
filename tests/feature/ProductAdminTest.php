@@ -3,22 +3,18 @@
 declare(strict_types=1);
 
 use App\Enums\UserRole;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
 use CodeIgniter\Test\FeatureTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 상품 관리 컨트롤러 feature 테스트.
  *
  * @internal
  */
-final class ProductAdminTest extends CIUnitTestCase
+final class ProductAdminTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
     use FeatureTestTrait;
 
-    protected $refresh   = true;
-    protected $namespace = 'App';
 
     /**
      * @return array<string, array<string, mixed>>

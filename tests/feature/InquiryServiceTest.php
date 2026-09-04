@@ -5,21 +5,15 @@ declare(strict_types=1);
 use App\Enums\InquiryStatus;
 use App\Models\InquiryModel;
 use App\Services\InquiryService;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 문의 운영 서비스 — 답변 확정 발송(상태 전이) / 목록 페이징·필터.
  *
  * @internal
  */
-final class InquiryServiceTest extends CIUnitTestCase
+final class InquiryServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     private function insertInquiry(InquiryModel $model, array $extra = []): int
     {
         return (int) $model->insert(array_merge([

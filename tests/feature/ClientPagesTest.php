@@ -4,22 +4,18 @@ declare(strict_types=1);
 
 use App\Enums\UserRole;
 use App\Models\CustomerModel;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
 use CodeIgniter\Test\FeatureTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 고객 페이지(가입·스코프·고객센터) feature 테스트.
  *
  * @internal
  */
-final class ClientPagesTest extends CIUnitTestCase
+final class ClientPagesTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
     use FeatureTestTrait;
 
-    protected $refresh   = true;
-    protected $namespace = 'App';
 
     private const int CLIENT_USER = 300;
 

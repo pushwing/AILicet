@@ -8,21 +8,15 @@ use App\Integrations\AiModelTier;
 use App\Integrations\NullAiClient;
 use App\Models\LogModel;
 use App\Services\LogClassificationService;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 로그 AI 분류·요약 서비스 — 미분류 로그 UPDATE / 미설정 no-op / 개별 실패 skip.
  *
  * @internal
  */
-final class LogClassificationServiceTest extends CIUnitTestCase
+final class LogClassificationServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     /**
      * 지정한 응답을 돌려주는 가짜 AiClient. $throwOn 메시지가 오면 예외를 던진다.
      */

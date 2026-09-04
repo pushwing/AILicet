@@ -4,22 +4,18 @@ declare(strict_types=1);
 
 use App\Enums\UserRole;
 use App\Models\CustomerModel;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
 use CodeIgniter\Test\FeatureTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 대행사 페이지(소유권 스코프) feature 테스트.
  *
  * @internal
  */
-final class AgencyPagesTest extends CIUnitTestCase
+final class AgencyPagesTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
     use FeatureTestTrait;
 
-    protected $refresh   = true;
-    protected $namespace = 'App';
 
     private int $agencyId  = 0;
     private int $otherId   = 0;

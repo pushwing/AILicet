@@ -14,22 +14,18 @@ use App\Models\ProductModel;
 use App\Models\ProductModuleModel;
 use App\Services\NodeLockLicenseService;
 use CodeIgniter\Config\Services;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
 use CodeIgniter\Test\FeatureTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 라이센스 관리 UI(컨트롤러) feature 테스트.
  *
  * @internal
  */
-final class LicenseAdminTest extends CIUnitTestCase
+final class LicenseAdminTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
     use FeatureTestTrait;
 
-    protected $refresh   = true;
-    protected $namespace = 'App';
 
     private string $tmpDir;
     private LicenseSigner $signer;
