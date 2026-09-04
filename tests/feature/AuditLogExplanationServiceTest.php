@@ -8,21 +8,15 @@ use App\Integrations\AiModelTier;
 use App\Integrations\NullAiClient;
 use App\Models\AuditLogModel;
 use App\Services\AuditLogExplanationService;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 감사 로그 AI 사람용 설명 서비스 — 미설명 감사 로그 UPDATE / 미설정 no-op / 개별 실패 격리.
  *
  * @internal
  */
-final class AuditLogExplanationServiceTest extends CIUnitTestCase
+final class AuditLogExplanationServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     /**
      * 지정한 응답을 돌려주는 가짜 AiClient.
      */

@@ -5,21 +5,15 @@ declare(strict_types=1);
 use App\Enums\LicenseStatus;
 use App\Models\LicenseModel;
 use App\Services\LicenseExpiryService;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 만료 배치 서비스 DB 통합 테스트.
  *
  * @internal
  */
-final class LicenseExpiryServiceTest extends CIUnitTestCase
+final class LicenseExpiryServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     private LicenseExpiryService $service;
     private int $productId;
 

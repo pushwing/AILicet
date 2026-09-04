@@ -10,21 +10,15 @@ use App\Models\LicenseModel;
 use App\Models\ProductModel;
 use App\Services\FloatingLicenseService;
 use CodeIgniter\Config\Services;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 플로팅 라이센스 발급·검증 준비 DB 통합 테스트.
  *
  * @internal
  */
-final class FloatingLicenseServiceTest extends CIUnitTestCase
+final class FloatingLicenseServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     private const string SECRET = 'floating-test-secret-0123456789-ab';
 
     private FloatingLicenseService $service;

@@ -6,21 +6,15 @@ use App\Enums\AuditEventType;
 use App\Models\LicenseHistoryModel;
 use App\Models\LicenseModel;
 use App\Services\AbuseDetectionService;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 부정사용 감지 서비스 DB 통합 테스트.
  *
  * @internal
  */
-final class AbuseDetectionServiceTest extends CIUnitTestCase
+final class AbuseDetectionServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     private AbuseDetectionService $service;
     private int $licenseId;
 

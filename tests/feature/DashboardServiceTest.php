@@ -12,21 +12,15 @@ use App\Models\LicenseHistoryModel;
 use App\Models\LicenseModel;
 use App\Models\ProductModel;
 use App\Services\DashboardService;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 대시보드 집계 서비스 DB 통합 테스트.
  *
  * @internal
  */
-final class DashboardServiceTest extends CIUnitTestCase
+final class DashboardServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     private DashboardService $service;
     private int $productId;
 

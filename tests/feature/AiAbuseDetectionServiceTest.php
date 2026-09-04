@@ -11,21 +11,15 @@ use App\Models\LicenseHistoryModel;
 use App\Models\LicenseModel;
 use App\Models\ProductModel;
 use App\Services\AiAbuseDetectionService;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * AI 부정사용 이상 탐지 — 집계·판단·audit_logs 기록 / 미설정 no-op / 중복 방지.
  *
  * @internal
  */
-final class AiAbuseDetectionServiceTest extends CIUnitTestCase
+final class AiAbuseDetectionServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     /** 지정 응답을 돌려주는 가짜 AiClient. */
     private function fakeAi(string $response, bool $configured = true): AiClient
     {

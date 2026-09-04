@@ -5,21 +5,15 @@ declare(strict_types=1);
 use App\Models\CustomerModel;
 use App\Services\ClientService;
 use App\Services\ClientSignupService;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 고객 서비스(가입·스코프·문의) DB 통합 테스트.
  *
  * @internal
  */
-final class ClientServiceTest extends CIUnitTestCase
+final class ClientServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     private ClientService $client;
     private ClientSignupService $signup;
     private int $seq = 0;

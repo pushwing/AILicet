@@ -5,21 +5,15 @@ declare(strict_types=1);
 use App\DTO\CustomerRequest;
 use App\Models\CustomerModel;
 use App\Services\AgencyService;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 대행사 소유권 스코프 DB 통합 테스트.
  *
  * @internal
  */
-final class AgencyServiceTest extends CIUnitTestCase
+final class AgencyServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     private AgencyService $service;
 
     protected function setUp(): void

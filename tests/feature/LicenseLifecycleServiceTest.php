@@ -17,21 +17,15 @@ use App\Models\ProductModel;
 use App\Services\FloatingLicenseService;
 use App\Services\LicenseLifecycleService;
 use App\Services\NodeLockLicenseService;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 라이센스 생명주기(상태/연장/재발급) DB 통합 테스트.
  *
  * @internal
  */
-final class LicenseLifecycleServiceTest extends CIUnitTestCase
+final class LicenseLifecycleServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     private LicenseSigner $signer;
     private LocalLicenseStorage $storage;
     private NodeLockLicenseService $nodeLock;

@@ -11,21 +11,15 @@ use App\Licensing\Storage\LocalLicenseStorage;
 use App\Licensing\Strategy\LicensePayloadStrategyResolver;
 use App\Models\ProductModel;
 use App\Services\NodeLockLicenseService;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 노드락 발급 엔진 DB 통합 테스트.
  *
  * @internal
  */
-final class NodeLockLicenseServiceTest extends CIUnitTestCase
+final class NodeLockLicenseServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     private LicenseSigner $signer;
     private LocalLicenseStorage $storage;
     private NodeLockLicenseService $service;
