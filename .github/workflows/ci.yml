@@ -19,10 +19,9 @@ concurrency:
 jobs:
   backend:
     name: backend (PHP 8.5 · CS Fixer · PHPStan · PHPUnit)
-    # self-hosted(macOS) 러너는 `services:` 도커 컨테이너를 지원하지 않는다
-    # (GitHub Actions 서비스 컨테이너는 Linux 러너 전용). 대신 아래에서
-    # MySQL 을 docker run 으로 직접 띄우고 잡 종료 시 정리한다.
-    runs-on: [self-hosted, macOS, ARM64]
+    # MySQL 을 docker run 으로 직접 띄우고 잡 종료 시 정리한다
+    # (여러 저장소가 러너를 공유해 고정 포트 대신 임의 포트를 배정받는다).
+    runs-on: [self-hosted, Linux, X64]
 
     steps:
       - name: Checkout
@@ -69,14 +68,14 @@ jobs:
       - name: .env 구성 (CI용 DB · JWT)
         run: |
           cp env .env
-          sed -i '' "s|^database.default.hostname = .*|database.default.hostname = 127.0.0.1|" .env
-          sed -i '' "s|^database.default.database = .*|database.default.database = aicura_test|" .env
-          sed -i '' "s|^database.default.password =.*|database.default.password = root|" .env
-          sed -i '' "s|^database.default.port = .*|database.default.port = ${{ env.CI_MYSQL_PORT }}|" .env
-          sed -i '' "s|^database.tests.hostname = .*|database.tests.hostname = 127.0.0.1|" .env
-          sed -i '' "s|^database.tests.password =.*|database.tests.password = root|" .env
-          sed -i '' "s|^database.tests.port = .*|database.tests.port = ${{ env.CI_MYSQL_PORT }}|" .env
-          sed -i '' "s|^JWT_SECRET = .*|JWT_SECRET = ci-test-secret-key-01234567890123456789|" .env
+          sed -i "s|^database.default.hostname = .*|database.default.hostname = 127.0.0.1|" .env
+          sed -i "s|^database.default.database = .*|database.default.database = aicura_test|" .env
+          sed -i "s|^database.default.password =.*|database.default.password = root|" .env
+          sed -i "s|^database.default.port = .*|database.default.port = ${{ env.CI_MYSQL_PORT }}|" .env
+          sed -i "s|^database.tests.hostname = .*|database.tests.hostname = 127.0.0.1|" .env
+          sed -i "s|^database.tests.password =.*|database.tests.password = root|" .env
+          sed -i "s|^database.tests.port = .*|database.tests.port = ${{ env.CI_MYSQL_PORT }}|" .env
+          sed -i "s|^JWT_SECRET = .*|JWT_SECRET = ci-test-secret-key-01234567890123456789|" .env
 
       - name: writable 디렉토리 보장
         run: |
@@ -95,7 +94,7 @@ jobs:
 
   frontapi:
     name: frontapi (pure PHP · PHPStan · PHPUnit)
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: [self-hosted, Linux, X64]
 
     defaults:
       run:
