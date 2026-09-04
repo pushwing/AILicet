@@ -31,7 +31,7 @@ AILicet 은 성형·토탈 광고 솔루션(AIvance 제품군)을 위한 **라�
                    └───────────────────────────┘
 ```
 
-- **회원 인증**은 [AITessera](https://github.com/pushwing/AITessera)(JWT) 에 위임 — AILicet 은 토큰을 **검증만** 한다. 검증은 비대칭키(RS256) 공개키 방식이다.
+- **회원 인증**은 [AITessera](https://github.com/aivance-kr/AITessera)(JWT) 에 위임 — AILicet 은 토큰을 **검증만** 한다. 검증은 비대칭키(RS256) 공개키 방식이다.
 - **노드락**(오프라인): Ed25519 서명 파일 배포 → 클라이언트가 공개키로 오프라인 검증.
 - **플로팅**(온라인): 관리키만 배포 → frontApi 로 온라인 활성화·유효성·사용량 차감.
 
@@ -157,7 +157,7 @@ php spark db:seed DemoSeeder     # 대행사(user_id=2)·고객(user_id=3) + 샘
 운영자 화면의 **회원 계정 관리**(`/admin/accounts`, AITessera 회원 API 연동)는 실제 AITessera
 로그인으로 발급된 토큰이 필요하다. 데모 로그인은 토큰이 없어 이 화면은 안내만 표시된다.
 
-1. [AITessera](https://github.com/pushwing/AITessera) 를 실행한다(예: `php -S localhost:9300 -t public`, 운영자 계정 시드, `JWT_ALGO=RS256` + `php bin/console jwt:keygen`).
+1. [AITessera](https://github.com/aivance-kr/AITessera) 를 실행한다(예: `php -S localhost:9300 -t public`, 운영자 계정 시드, `JWT_ALGO=RS256` + `php bin/console jwt:keygen`).
 2. AILicet `.env` 에 아래를 설정한다.
    ```env
    aitessera.baseURL = http://127.0.0.1:9300

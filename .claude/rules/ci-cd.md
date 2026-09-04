@@ -58,13 +58,13 @@ on:
 
 ### self-hosted 러너에서 돈다
 
-GitHub 호스팅 러너(`ubuntu-latest`)가 아니라 이 로컬 Mac을 self-hosted 러너로 등록해서 돈다. 두 잡 모두 `runs-on: [self-hosted, macOS, ARM64]`.
+GitHub 호스팅 러너(`ubuntu-latest`)가 아니라 **조직(`aivance-kr`) 레벨 self-hosted 러너 1개**를 등록해서 돈다. 두 잡 모두 `runs-on: [self-hosted, Linux, X64]`.
 
-- **러너 위치**: `~/actions-runners/AILicet` (저장소 밖). 러너 이름 `mac-local-runner`, launchd 서비스 `actions.runner.pushwing-AILicet.mac-local-runner` — Mac이 켜져 있으면 자동으로 리스닝한다. (같은 Mac에 AIFid·AIPicto 용 러너도 별도로 등록돼 있다 — 저장소별로 러너가 분리된다.)
-- **MySQL**: self-hosted macOS 러너는 `services:` 도커 컨테이너를 지원하지 않는다(Linux 러너 전용 기능). 대신 각 잡에서 `docker run` 으로 직접 기동하고 `if: always()` 스텝으로 정리한다.
-- **포트**: 고정 포트를 쓰지 않는다. 이 Mac은 개발용 시스템 `mysqld`(`3306`)뿐 아니라 AIFid·AITessera 등 **다른 저장소의 CI 컨테이너와도 러너를 공유**해서, 특정 포트를 박아두면 여러 저장소가 동시에 CI를 돌릴 때 `port is already allocated` 로 충돌한다. 대신 `docker run -p 127.0.0.1::3306`(호스트 포트 생략)으로 도커가 빈 포트를 임의 배정하게 하고, `docker inspect` 로 실제 배정된 포트를 읽어 `$GITHUB_ENV` 에 저장해 이후 스텝(`.env` 구성, PHPUnit `DB_PORT`)에서 사용한다.
-- **sed 문법**: macOS 기본 `sed`는 BSD 계열이라 `-i` 뒤에 빈 문자열 인자가 필요하다(`sed -i '' "..."`). GNU sed(`sed -i "..."`)와 다르니 워크플로 수정 시 주의.
-- **호스팅 러너로 되돌리려면**: `runs-on` 을 `ubuntu-latest` 로 바꾸고 `docker run` 스텝을 `services:` 블록으로 되돌리면 된다(포트도 표준값 `3306`으로 원복 가능).
+- **러너 구성**: 저장소별로 러너를 따로 두지 않고, `aivance-kr` 조직에 등록된 self-hosted 러너 1개를 AILicet 을 포함한 모든 저장소가 공유한다.
+- **MySQL**: 각 잡에서 `docker run` 으로 직접 기동하고 `if: always()` 스텝으로 정리한다(Linux 러너는 `services:` 도커 컨테이너도 지원하지만, 아래 포트 사유로 `docker run` 방식을 유지한다).
+- **포트**: 고정 포트를 쓰지 않는다. 이 러너는 여러 저장소가 **공유**해서, 특정 포트를 박아두면 여러 저장소가 동시에 CI를 돌릴 때 `port is already allocated` 로 충돌한다. 대신 `docker run -p 127.0.0.1::3306`(호스트 포트 생략)으로 도커가 빈 포트를 임의 배정하게 하고, `docker inspect` 로 실제 배정된 포트를 읽어 `$GITHUB_ENV` 에 저장해 이후 스텝(`.env` 구성, PHPUnit `DB_PORT`)에서 사용한다.
+- **sed 문법**: 러너가 Linux(GNU sed)라 워크플로는 `sed -i "..."`(GNU 문법)를 쓴다. macOS BSD sed 는 `-i` 뒤에 빈 문자열 인자(`sed -i '' "..."`)가 필요해 문법이 다르므로, 로컬 macOS 에서 워크플로 스크립트를 그대로 실행하면 깨진다 — 주의.
+- **호스팅 러너로 되돌리려면**: `runs-on` 을 `ubuntu-latest` 로 바꾸면 된다(포트도 표준값 `3306`으로 원복 가능. `docker run` 을 `services:` 블록으로 바꿔도 되지만 필수는 아니다).
 
 ### `backend` 잡 — PHP 8.5 · CS Fixer · PHPStan · PHPUnit
 
@@ -113,7 +113,7 @@ cd frontapi && composer check      # frontapi(pure PHP) — analyse + test
 
 - **트리거**: `main` push + `workflow_dispatch`(수동·롤백, `ref` 입력)
 - **동시성**: `deploy-production` 그룹 — 배포 동시 실행 1개, `cancel-in-progress: false`
-- **러너**: `ci.yml` 과 동일하게 self-hosted(`[self-hosted, macOS, ARM64]`, `mac-local-runner`)에서 돈다. GitHub 호스팅 러너(`ubuntu-latest`)는 계정 결제/스펜딩 리밋 문제로 잡 자체가 시작되지 못한 사례(2026-07-30)가 있어 전환했다 — `appleboy/ssh-action` 은 러너에서 프로덕션 서버로 SSH 접속만 하므로 self-hosted 에서도 동일하게 동작한다.
+- **러너**: `ci.yml` 과 동일하게 조직(`aivance-kr`) 레벨 self-hosted 러너(`[self-hosted, Linux, X64]`)에서 돈다. GitHub 호스팅 러너(`ubuntu-latest`)는 계정 결제/스펜딩 리밋 문제로 잡 자체가 시작되지 못한 사례(2026-07-30)가 있어 전환했다 — `appleboy/ssh-action` 은 러너에서 프로덕션 서버로 SSH 접속만 하므로 self-hosted 에서도 동일하게 동작한다.
 - **대상**: Ubuntu + mod_php 아파치 단일 서버 (`appleboy/ssh-action`)
 
 ### 배포 절차 (`deploy.yml` 이 SSH 로 서버에서 자동 실행 — 수동 실행 시 동일 순서)
