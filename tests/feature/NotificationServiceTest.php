@@ -10,21 +10,15 @@ use App\Models\LicenseModel;
 use App\Models\NotificationModel;
 use App\Models\ProductModel;
 use App\Services\NotificationService;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 인앱 메시지 서비스 DB 통합 테스트 — 수신자 해석·dedup·수신함 스코프.
  *
  * @internal
  */
-final class NotificationServiceTest extends CIUnitTestCase
+final class NotificationServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     private NotificationService $service;
     private int $productId;
     private int $agencyId;

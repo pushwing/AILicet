@@ -6,21 +6,15 @@ use App\DTO\CustomerRequest;
 use App\Integrations\AitesseraClient;
 use App\Services\CustomerService;
 use CodeIgniter\Config\Services;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * CustomerService DB 통합 테스트.
  *
  * @internal
  */
-final class CustomerServiceTest extends CIUnitTestCase
+final class CustomerServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     private CustomerService $service;
 
     protected function setUp(): void

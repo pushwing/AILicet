@@ -6,8 +6,7 @@ use App\DTO\ProductRequest;
 use App\Models\LicenseModel;
 use App\Models\ModuleModel;
 use App\Services\ProductService;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * ProductService DB 통합 테스트.
@@ -16,13 +15,8 @@ use CodeIgniter\Test\DatabaseTestTrait;
  *
  * @internal
  */
-final class ProductServiceTest extends CIUnitTestCase
+final class ProductServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     private ProductService $service;
 
     protected function setUp(): void

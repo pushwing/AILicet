@@ -5,22 +5,18 @@ declare(strict_types=1);
 use App\Enums\AuditEventType;
 use App\Enums\UserRole;
 use App\Models\AuditLogModel;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
 use CodeIgniter\Test\FeatureTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 감사로그 관리 UI(컨트롤러) feature 테스트.
  *
  * @internal
  */
-final class AuditLogAdminTest extends CIUnitTestCase
+final class AuditLogAdminTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
     use FeatureTestTrait;
 
-    protected $refresh   = true;
-    protected $namespace = 'App';
 
     /**
      * @return array<string, array<string, mixed>>

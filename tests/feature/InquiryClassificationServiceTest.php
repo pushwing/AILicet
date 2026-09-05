@@ -8,21 +8,15 @@ use App\Integrations\AiModelTier;
 use App\Integrations\NullAiClient;
 use App\Models\InquiryModel;
 use App\Services\InquiryClassificationService;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * 문의 AI 분류·초안 서비스 — 미처리 문의 UPDATE / 미설정 no-op / 개별 실패 skip / dead-letter.
  *
  * @internal
  */
-final class InquiryClassificationServiceTest extends CIUnitTestCase
+final class InquiryClassificationServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     /**
      * 지정한 응답을 돌려주는 가짜 AiClient.
      */

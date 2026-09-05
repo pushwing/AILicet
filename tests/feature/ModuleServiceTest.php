@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 use App\DTO\ModuleRequest;
 use App\Services\ModuleService;
-use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\DatabaseTestCase;
 
 /**
  * ModuleService DB 통합 테스트.
@@ -14,13 +13,8 @@ use CodeIgniter\Test\DatabaseTestTrait;
  *
  * @internal
  */
-final class ModuleServiceTest extends CIUnitTestCase
+final class ModuleServiceTest extends DatabaseTestCase
 {
-    use DatabaseTestTrait;
-
-    protected $refresh   = true;
-    protected $namespace = 'App';
-
     private ModuleService $service;
 
     protected function setUp(): void
